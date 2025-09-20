@@ -245,26 +245,76 @@ while cap.isOpened():
         simulate_keyboard_input(gesture_detected)
         last_gesture_time = current_time
     
-    # Combine body and hand masks
-    combined_mask = body_mask | hand_mask
-    
-    # Create black background with rainbow person
+    # Create black background
     output_frame = np.zeros_like(frame)
     
-    # Create rainbow/neon color for person
-    if np.any(combined_mask):
+    # Draw stickman using pose landmarks
+    if pose_results.pose_landmarks:
+        h, w = frame.shape[:2]
         rainbow_color = get_neon_person_color()
-        output_frame[combined_mask] = rainbow_color
         
-        # Add white outline to the detected person
-        # Create outline by dilating the mask and subtracting the original
-        kernel = np.ones((3, 3), np.uint8)
-        dilated_mask = cv2.dilate(combined_mask.astype(np.uint8), kernel, iterations=5)
-        outline_mask = dilated_mask - combined_mask.astype(np.uint8)
+        # Get pose landmarks
+        landmarks = pose_results.pose_landmarks.landmark
         
-        # Apply white outline
-        white_color = np.array([255, 255, 255], dtype=np.uint8)
-        output_frame[outline_mask > 0] = white_color
+        # Define stickman connections (simplified skeleton)
+        connections = [
+            # Head to shoulders
+            (mp_pose.PoseLandmark.NOSE, mp_pose.PoseLandmark.LEFT_EAR),
+            (mp_pose.PoseLandmark.NOSE, mp_pose.PoseLandmark.RIGHT_EAR),
+            (mp_pose.PoseLandmark.LEFT_EAR, mp_pose.PoseLandmark.LEFT_SHOULDER),
+            (mp_pose.PoseLandmark.RIGHT_EAR, mp_pose.PoseLandmark.RIGHT_SHOULDER),
+            
+            # Torso
+            (mp_pose.PoseLandmark.LEFT_SHOULDER, mp_pose.PoseLandmark.RIGHT_SHOULDER),
+            (mp_pose.PoseLandmark.LEFT_SHOULDER, mp_pose.PoseLandmark.LEFT_HIP),
+            (mp_pose.PoseLandmark.RIGHT_SHOULDER, mp_pose.PoseLandmark.RIGHT_HIP),
+            (mp_pose.PoseLandmark.LEFT_HIP, mp_pose.PoseLandmark.RIGHT_HIP),
+            
+            # Arms
+            (mp_pose.PoseLandmark.LEFT_SHOULDER, mp_pose.PoseLandmark.LEFT_ELBOW),
+            (mp_pose.PoseLandmark.LEFT_ELBOW, mp_pose.PoseLandmark.LEFT_WRIST),
+            (mp_pose.PoseLandmark.RIGHT_SHOULDER, mp_pose.PoseLandmark.RIGHT_ELBOW),
+            (mp_pose.PoseLandmark.RIGHT_ELBOW, mp_pose.PoseLandmark.RIGHT_WRIST),
+            
+            # Legs
+            (mp_pose.PoseLandmark.LEFT_HIP, mp_pose.PoseLandmark.LEFT_KNEE),
+            (mp_pose.PoseLandmark.LEFT_KNEE, mp_pose.PoseLandmark.LEFT_ANKLE),
+            (mp_pose.PoseLandmark.RIGHT_HIP, mp_pose.PoseLandmark.RIGHT_KNEE),
+            (mp_pose.PoseLandmark.RIGHT_KNEE, mp_pose.PoseLandmark.RIGHT_ANKLE),
+        ]
+        
+        # Draw stickman lines
+        for connection in connections:
+            start_landmark = landmarks[connection[0]]
+            end_landmark = landmarks[connection[1]]
+            
+            # Convert to pixel coordinates
+            start_x = int(start_landmark.x * w)
+            start_y = int(start_landmark.y * h)
+            end_x = int(end_landmark.x * w)
+            end_y = int(end_landmark.y * h)
+            
+            # Draw thick line for stickman
+            cv2.line(output_frame, (start_x, start_y), (end_x, end_y), rainbow_color, 8)
+        
+        # Draw joints as circles
+        joint_landmarks = [
+            mp_pose.PoseLandmark.NOSE,
+            mp_pose.PoseLandmark.LEFT_SHOULDER, mp_pose.PoseLandmark.RIGHT_SHOULDER,
+            mp_pose.PoseLandmark.LEFT_ELBOW, mp_pose.PoseLandmark.RIGHT_ELBOW,
+            mp_pose.PoseLandmark.LEFT_WRIST, mp_pose.PoseLandmark.RIGHT_WRIST,
+            mp_pose.PoseLandmark.LEFT_HIP, mp_pose.PoseLandmark.RIGHT_HIP,
+            mp_pose.PoseLandmark.LEFT_KNEE, mp_pose.PoseLandmark.RIGHT_KNEE,
+            mp_pose.PoseLandmark.LEFT_ANKLE, mp_pose.PoseLandmark.RIGHT_ANKLE
+        ]
+        
+        for joint in joint_landmarks:
+            landmark = landmarks[joint]
+            x = int(landmark.x * w)
+            y = int(landmark.y * h)
+            cv2.circle(output_frame, (x, y), 6, rainbow_color, -1)
+            # Add white outline to joints
+            cv2.circle(output_frame, (x, y), 6, (255, 255, 255), 2)
     
     # Draw hand landmarks with individual finger colors
     if hand_results.multi_hand_landmarks:

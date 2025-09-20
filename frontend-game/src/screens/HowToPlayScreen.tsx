@@ -1,6 +1,4 @@
 import React, { useState } from 'react';
-import { NeonButton } from '../components/ui/NeonButton';
-import { PixelPanel } from '../components/ui/PixelPanel';
 import { useGameStore } from '../store/gameStore';
 
 export const HowToPlayScreen: React.FC = () => {

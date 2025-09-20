@@ -1,9 +1,0 @@
-C:\Users\danie\bigred\server\target\release\deps\spacetimedb_bindings_macro-f964eac7f495a1a3.d: C:\Users\danie\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\spacetimedb-bindings-macro-1.3.2\src\lib.rs C:\Users\danie\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\spacetimedb-bindings-macro-1.3.2\src\reducer.rs C:\Users\danie\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\spacetimedb-bindings-macro-1.3.2\src\sats.rs C:\Users\danie\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\spacetimedb-bindings-macro-1.3.2\src\table.rs C:\Users\danie\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\spacetimedb-bindings-macro-1.3.2\src\util.rs
-
-C:\Users\danie\bigred\server\target\release\deps\spacetimedb_bindings_macro-f964eac7f495a1a3.dll: C:\Users\danie\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\spacetimedb-bindings-macro-1.3.2\src\lib.rs C:\Users\danie\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\spacetimedb-bindings-macro-1.3.2\src\reducer.rs C:\Users\danie\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\spacetimedb-bindings-macro-1.3.2\src\sats.rs C:\Users\danie\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\spacetimedb-bindings-macro-1.3.2\src\table.rs C:\Users\danie\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\spacetimedb-bindings-macro-1.3.2\src\util.rs
-
-C:\Users\danie\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\spacetimedb-bindings-macro-1.3.2\src\lib.rs:
-C:\Users\danie\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\spacetimedb-bindings-macro-1.3.2\src\reducer.rs:
-C:\Users\danie\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\spacetimedb-bindings-macro-1.3.2\src\sats.rs:
-C:\Users\danie\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\spacetimedb-bindings-macro-1.3.2\src\table.rs:
-C:\Users\danie\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\spacetimedb-bindings-macro-1.3.2\src\util.rs:

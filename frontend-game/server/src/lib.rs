@@ -29,6 +29,11 @@ pub struct Lobby {
     started: bool,
     red_score: u32,
     blue_score: u32,
+    // Bear vs Man chase mechanics
+    bear_progress: f32,
+    man_progress: f32,
+    game_over: bool,
+    game_result: Option<String>, // "bear_escaped" or "man_caught"
 }
 
 fn validate_code(code: &str) -> Result<(), String> {
@@ -59,6 +64,10 @@ pub fn create_lobby(ctx: &ReducerContext, code: String) -> Result<(), String> {
     started: false,
     red_score: 0,
     blue_score: 0,
+    bear_progress: 10.0,
+    man_progress: 0.0,
+    game_over: false,
+    game_result: None,
     });
     Ok(())
 }
@@ -169,6 +178,26 @@ pub fn set_score(ctx: &ReducerContext, code: String, score: u32) -> Result<(), S
             Ok(())
         } else if lobby.blue == Some(ctx.sender) {
             ctx.db.lobby().code().update(Lobby { blue_score: score, ..lobby });
+            Ok(())
+        } else {
+            Err("You are not a member of this lobby".into())
+        }
+    } else { Err("Lobby not found".into()) }
+}
+
+#[reducer]
+pub fn update_game_state(ctx: &ReducerContext, code: String, bear_progress: f32, man_progress: f32, game_over: bool, game_result: Option<String>) -> Result<(), String> {
+    let code_up = code.to_uppercase();
+    if let Some(lobby) = ctx.db.lobby().code().find(&code_up) {
+        // Only allow members to update game state
+        if lobby.red == Some(ctx.sender) || lobby.blue == Some(ctx.sender) {
+            ctx.db.lobby().code().update(Lobby { 
+                bear_progress, 
+                man_progress, 
+                game_over, 
+                game_result, 
+                ..lobby 
+            });
             Ok(())
         } else {
             Err("You are not a member of this lobby".into())

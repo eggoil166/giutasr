@@ -50,6 +50,10 @@ cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 frame_count = 0
 fps_start_time = cv2.getTickCount()
 
+# Rainbow/neon color animation variables
+rainbow_start_time = time.time()
+rainbow_speed = 2.0  # Speed of color cycling
+
 def count_fingers_above_shoulders(hand_landmarks, pose_landmarks, frame_height, frame_width):
     """Count fingers that are above the shoulder level"""
     if not pose_landmarks or not hand_landmarks:
@@ -85,6 +89,54 @@ def simulate_keyboard_input(should_press_spacebar):
         keyboard_controller.release(Key.space)
         spacebar_pressed = False
         print("SPACEBAR RELEASED - Gesture ended!")
+
+def get_rainbow_color(time_offset=0):
+    """Generate rainbow color based on time for cycling effect"""
+    current_time = time.time() + time_offset
+    cycle = (current_time * rainbow_speed) % (2 * np.pi)
+    
+    # Create smooth color transitions
+    r = int(255 * (0.5 + 0.5 * np.sin(cycle)))
+    g = int(255 * (0.5 + 0.5 * np.sin(cycle + 2 * np.pi / 3)))
+    b = int(255 * (0.5 + 0.5 * np.sin(cycle + 4 * np.pi / 3)))
+    
+    return (b, g, r)  # BGR format for OpenCV
+
+def get_neon_person_color():
+    """Generate neon rainbow color for person silhouette with fade effect"""
+    current_time = time.time()
+    cycle = (current_time * rainbow_speed) % (2 * np.pi)
+    
+    # Create neon colors with higher intensity
+    r = int(255 * (0.7 + 0.3 * np.sin(cycle)))
+    g = int(255 * (0.7 + 0.3 * np.sin(cycle + 2 * np.pi / 3)))
+    b = int(255 * (0.7 + 0.3 * np.sin(cycle + 4 * np.pi / 3)))
+    
+    # Add neon glow effect with fade
+    intensity = 0.8 + 0.2 * np.sin(cycle * 2)
+    r = int(r * intensity)
+    g = int(g * intensity)
+    b = int(b * intensity)
+    
+    return (b, g, r)  # BGR format for OpenCV
+
+def get_neon_outline_color():
+    """Generate neon rainbow color for outline with different phase"""
+    current_time = time.time()
+    cycle = (current_time * rainbow_speed + np.pi) % (2 * np.pi)  # Offset phase
+    
+    # Create neon colors with higher intensity
+    r = int(255 * (0.8 + 0.2 * np.sin(cycle)))
+    g = int(255 * (0.8 + 0.2 * np.sin(cycle + 2 * np.pi / 3)))
+    b = int(255 * (0.8 + 0.2 * np.sin(cycle + 4 * np.pi / 3)))
+    
+    # Add neon glow effect
+    intensity = 0.9 + 0.1 * np.sin(cycle * 3)
+    r = int(r * intensity)
+    g = int(g * intensity)
+    b = int(b * intensity)
+    
+    return (b, g, r)  # BGR format for OpenCV
 
 while cap.isOpened():
     ret, frame = cap.read()
@@ -196,12 +248,23 @@ while cap.isOpened():
     # Combine body and hand masks
     combined_mask = body_mask | hand_mask
     
-    # Create black background with purple person
+    # Create black background with rainbow person
     output_frame = np.zeros_like(frame)
     
-    # Create purple color for person
-    purple_color = np.array([128, 0, 128], dtype=np.uint8)
-    output_frame[combined_mask] = purple_color
+    # Create rainbow/neon color for person
+    if np.any(combined_mask):
+        rainbow_color = get_neon_person_color()
+        output_frame[combined_mask] = rainbow_color
+        
+        # Add white outline to the detected person
+        # Create outline by dilating the mask and subtracting the original
+        kernel = np.ones((3, 3), np.uint8)
+        dilated_mask = cv2.dilate(combined_mask.astype(np.uint8), kernel, iterations=5)
+        outline_mask = dilated_mask - combined_mask.astype(np.uint8)
+        
+        # Apply white outline
+        white_color = np.array([255, 255, 255], dtype=np.uint8)
+        output_frame[outline_mask > 0] = white_color
     
     # Draw hand landmarks with individual finger colors
     if hand_results.multi_hand_landmarks:

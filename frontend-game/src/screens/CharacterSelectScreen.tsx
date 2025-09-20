@@ -36,6 +36,9 @@ export const CharacterSelectScreen: React.FC = () => {
   );
   
   const CharacterCard: React.FC<{ player: 1 | 2; character: Character | null }> = ({ player, character }) => {
+    // In multiplayer, determine which player this card represents based on lobby side
+    const isLocalPlayer = lobby.mode === 'solo' ? player === 1 : 
+      (lobby.side === 'red' ? player === 1 : player === 2);
     const isSelected = player === 1 ? players.p1.characterId : players.p2.characterId;
     const isP2Available = lobby.connectedP2 || player === 1;
     
@@ -57,8 +60,10 @@ export const CharacterSelectScreen: React.FC = () => {
               {CHARACTERS.map((char) => (
                 <div
                   key={char.id}
-                  onClick={() => selectCharacter(player, char.id)}
-                  className={`relative cursor-pointer transition-all duration-200 hover:scale-105 ${
+                  onClick={() => isLocalPlayer ? selectCharacter(player, char.id) : null}
+                  className={`relative transition-all duration-200 ${
+                    isLocalPlayer ? 'cursor-pointer hover:scale-105' : 'cursor-not-allowed opacity-50'
+                  } ${
                     isSelected === char.id ? 'ring-2 ring-pink-500' : ''
                   }`}
                 >

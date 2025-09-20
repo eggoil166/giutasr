@@ -294,13 +294,15 @@ export const SongSelectScreen: React.FC = () => {
                       className={`p-3 pixel-panel transition-all cursor-pointer ${
                         selectedCharIndex === index && focusMode === 'character'
                           ? 'highlighted scale-105'
-                          : players.p1.characterId === char.id
+                          : (lobby.mode === 'solo' ? players.p1.characterId : (lobby.side === 'red' ? players.p1.characterId : players.p2.characterId)) === char.id
                           ? 'outlined'
                           : 'hover:border-pixel-purple'
                       }`}
                       onClick={() => {
                         setSelectedCharIndex(index);
-                        selectCharacter(1, char.id);
+                        // In multiplayer, use lobby side to determine player number
+                        const playerNumber = lobby.mode === 'solo' ? 1 : (lobby.side === 'red' ? 1 : 2);
+                        selectCharacter(playerNumber, char.id);
                       }}
                     >
                       <div className="flex items-center space-x-3">

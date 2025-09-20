@@ -128,18 +128,24 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
   
   selectCharacter: (player, characterId) => {
-    console.log('CharacterSelected', { player, characterId });
+    const st = get();
+    console.log('CharacterSelected', { 
+      player, 
+      characterId, 
+      lobbySide: st.lobby.side, 
+      lobbyMode: st.lobby.mode,
+      currentP1: st.players.p1.characterId,
+      currentP2: st.players.p2.characterId
+    });
     set((state) => ({
       players: {
         ...state.players,
         [player === 1 ? 'p1' : 'p2']: { characterId, ready: true },
       },
     }));
-    // Persist if local side
-    const st = get();
+    // Persist if local side - always sync to server regardless of player parameter
     const conn = getConn();
-    const localPlayer = st.lobby.side === 'blue' ? 2 : 1;
-    if (st.lobby.mode !== 'solo' && player === localPlayer && st.lobby.code && conn) {
+    if (st.lobby.mode !== 'solo' && st.lobby.code && conn) {
       try { LobbyApi.setCharacter(conn, st.lobby.code, characterId); } catch (e) { console.warn('setCharacter failed', e); }
     }
   },
@@ -196,10 +202,21 @@ export const useGameStore = create<GameState>((set, get) => ({
           });
         }
         
+        // Debug logging for character assignment
+        if (row.redChar !== undefined || row.blueChar !== undefined) {
+          console.log('Character Assignment:', {
+            lobbySide: get().lobby.side,
+            redChar: row.redChar,
+            blueChar: row.blueChar,
+            currentP1: get().players.p1.characterId,
+            currentP2: get().players.p2.characterId
+          });
+        }
+        
         set((state) => ({
           players: {
-            p1: { ...state.players.p1, characterId: state.lobby.side === 'blue' ? (row.redChar ?? state.players.p1.characterId) : state.players.p1.characterId, ready: state.players.p1.ready },
-            p2: { ...state.players.p2, characterId: state.lobby.side !== 'blue' ? (row.blueChar ?? state.players.p2.characterId) : state.players.p2.characterId, ready: state.players.p2.ready },
+            p1: { ...state.players.p1, characterId: state.lobby.side === 'red' ? (row.redChar ?? state.players.p1.characterId) : state.players.p1.characterId, ready: state.players.p1.ready },
+            p2: { ...state.players.p2, characterId: state.lobby.side === 'blue' ? (row.blueChar ?? state.players.p2.characterId) : state.players.p2.characterId, ready: state.players.p2.ready },
           },
           gameplay: { 
             ...state.gameplay, 
@@ -240,10 +257,21 @@ export const useGameStore = create<GameState>((set, get) => ({
           });
         }
         
+        // Debug logging for character assignment
+        if (row.redChar !== undefined || row.blueChar !== undefined) {
+          console.log('Character Assignment:', {
+            lobbySide: get().lobby.side,
+            redChar: row.redChar,
+            blueChar: row.blueChar,
+            currentP1: get().players.p1.characterId,
+            currentP2: get().players.p2.characterId
+          });
+        }
+        
         set((state) => ({
           players: {
-            p1: { ...state.players.p1, characterId: state.lobby.side === 'blue' ? (row.redChar ?? state.players.p1.characterId) : state.players.p1.characterId, ready: state.players.p1.ready },
-            p2: { ...state.players.p2, characterId: state.lobby.side !== 'blue' ? (row.blueChar ?? state.players.p2.characterId) : state.players.p2.characterId, ready: state.players.p2.ready },
+            p1: { ...state.players.p1, characterId: state.lobby.side === 'red' ? (row.redChar ?? state.players.p1.characterId) : state.players.p1.characterId, ready: state.players.p1.ready },
+            p2: { ...state.players.p2, characterId: state.lobby.side === 'blue' ? (row.blueChar ?? state.players.p2.characterId) : state.players.p2.characterId, ready: state.players.p2.ready },
           },
           gameplay: { 
             ...state.gameplay, 

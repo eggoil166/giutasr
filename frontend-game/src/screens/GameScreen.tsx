@@ -137,9 +137,23 @@ export const GameScreen: React.FC = () => {
         setGameResult(stats.gameResult);
         if (!endHandledRef.current) {
           endHandledRef.current = true;
-          engine.stop();
-          updateGameplay({ gameOver: true, outcome: stats.gameResult });
-          setScreen('RESULTS');
+          
+          // Check if multiplayer mode - auto-restart instead of going to results
+          const isMultiplayer = lobby.mode === 'host' || lobby.mode === 'join' || lobby.connectedP2;
+          
+          if (isMultiplayer) {
+            // Auto-restart the song in multiplayer mode
+            console.log('Multiplayer song complete - auto-restarting...');
+            setTimeout(() => {
+              endHandledRef.current = false; // Reset the flag
+              engine.start(song?.id); // Restart the same song
+            }, 1000); // Brief pause before restart
+          } else {
+            // Single player mode - go to results as normal
+            engine.stop();
+            updateGameplay({ gameOver: true, outcome: stats.gameResult });
+            setScreen('RESULTS');
+          }
         }
       }
     }, 100);

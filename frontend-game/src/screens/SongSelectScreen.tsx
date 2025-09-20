@@ -16,7 +16,7 @@ const CHARACTERS: Character[] = [
 type AppWindow = Window & { gameAudioContext?: AudioContext; gameGainNode?: GainNode };
 
 export const SongSelectScreen: React.FC = () => {
-  const { song, players, lobby, selectSong, selectCharacter, toggleReady, startMatch, setScreen } = useGameStore();
+  const { song, players, lobby, selectSong, selectCharacter, toggleReady, startMatch, setScreen, hostLobby, joinLobby, netConnected, netError } = useGameStore();
   const [songs, setSongs] = useState<Song[]>([]);
   const [selectedSongIndex, setSelectedSongIndex] = useState(0);
   const [selectedCharIndex, setSelectedCharIndex] = useState(0);
@@ -26,6 +26,7 @@ export const SongSelectScreen: React.FC = () => {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const currentSongRef = useRef<string>('');
+  const [lobbyJoinCode, setLobbyJoinCode] = useState('');
 
   const playPreview = useCallback((songItem: Song) => {
     // Stop current preview if playing
@@ -294,7 +295,7 @@ export const SongSelectScreen: React.FC = () => {
                         </div>
                         <div className="flex-1">
                           <div className="text-pixel-white text-xs">{char.name}</div>
-                          <div className="text-xs text-pixel-gray">P:{char.power} S:{char.speed} T:{char.style}</div>
+                          <div className="text-xs text-pixel-gray">FIGHT ON!</div>
                         </div>
                       </div>
                       
@@ -312,11 +313,11 @@ export const SongSelectScreen: React.FC = () => {
               </div>
               
               {/* Player 2 Character (if multiplayer) */}
-              {lobby.connectedP2 && (
+              {lobby.mode !== 'solo' && (
                 <div>
                   <h3 className="text-sm pixel-glow-purple mb-4">PLAYER 2</h3>
                   <div className="p-3 pixel-panel outlined">
-                    {players.p2.characterId ? (
+                    {lobby.connectedP2 && players.p2.characterId ? (
                       <div className="flex items-center space-x-3">
                         <div className="w-12 h-12 lane-blue flex items-center justify-center">
                           <span className="text-xl">👤</span>
@@ -332,7 +333,8 @@ export const SongSelectScreen: React.FC = () => {
                       </div>
                     ) : (
                       <div className="text-center text-pixel-gray">
-                        <div className="pixel-blink text-xs">WAITING...</div>
+                        <div className="text-xs">{lobby.code ? 'WAITING FOR PLAYER 2' : 'CREATE OR JOIN LOBBY'}</div>
+                        {!lobby.connectedP2 && lobby.code && <div className="pixel-blink text-xs mt-1">…</div>}
                       </div>
                     )}
                   </div>
@@ -470,16 +472,20 @@ export const SongSelectScreen: React.FC = () => {
                     <div className={`text-lg ${lobby.p2Ready ? 'text-green-400' : 'text-yellow-400'}`}>
                       {lobby.p2Ready ? '✓ READY' : '⏳ NOT READY'}
                     </div>
-                    <button
-                      onClick={() => toggleReady(2)}
-                      className={`mt-2 pixel-button text-xs ${
-                        lobby.p2Ready 
-                          ? 'border-4 border-red-500 text-red-400' 
-                          : 'border-4 border-green-500 text-green-400'
-                      }`}
-                    >
-                      {lobby.p2Ready ? 'UNREADY' : 'READY UP'}
-                    </button>
+                    {/* Only show toggle for player 2 if this client IS player 2 */}
+                    {lobby.side === 'blue' && (
+                      <button
+                        onClick={() => toggleReady(2)}
+                        disabled={!lobby.connectedP2}
+                        className={`mt-2 pixel-button text-xs ${
+                          lobby.p2Ready 
+                            ? 'border-4 border-red-500 text-red-400' 
+                            : 'border-4 border-green-500 text-green-400'
+                        } ${!lobby.connectedP2 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        {lobby.p2Ready ? 'UNREADY' : 'READY UP'}
+                      </button>
+                    )}
                   </div>
                 </div>
                 {lobby.p1Ready && lobby.p2Ready && (
@@ -487,11 +493,54 @@ export const SongSelectScreen: React.FC = () => {
                     ALL PLAYERS READY!
                   </div>
                 )}
+                <div className="mt-4 text-xs text-center text-pixel-gray">
+                  {netConnected ? <span className="text-green-400">NET OK</span> : <span className="text-yellow-400">CONNECTING…</span>}
+                  {netError && <div className="text-red-400 mt-1">{netError}</div>}
+                </div>
               </div>
             </div>
           )}
         </div>
         
+        {/* Lobby Actions */}
+        <div className="pixel-panel p-4 mb-8">
+          <h3 className="text-sm text-pixel-white mb-3">MULTIPLAYER LOBBY</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="text-center">
+              <button
+                className="pixel-button px-6 py-3 w-full"
+                onClick={hostLobby}
+              >
+                CREATE LOBBY CODE
+              </button>
+              {lobby.code && (
+                <div className="mt-2 text-pixel-gray text-xs">CODE: {lobby.code} {lobby.redPresent && '(P1)'} {lobby.bluePresent && '(P2)'}
+                </div>
+              )}
+            </div>
+            <div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="ENTER LOBBY CODE"
+                  value={lobbyJoinCode}
+                  onChange={(e) => setLobbyJoinCode(e.target.value.toUpperCase())}
+                  maxLength={6}
+                  className="flex-1 px-3 py-2 pixel-panel text-pixel-white text-center"
+                />
+                <button
+                  className="pixel-button px-4"
+                  disabled={lobbyJoinCode.length !== 6}
+                  onClick={() => joinLobby(lobbyJoinCode)}
+                >
+                  JOIN
+                </button>
+              </div>
+              <div className="mt-1 text-pixel-gray text-xs">Codes are 6 characters</div>
+            </div>
+          </div>
+        </div>
+
         {/* Start Button */}
         <div className="text-center mb-8">
           <button
@@ -499,10 +548,7 @@ export const SongSelectScreen: React.FC = () => {
             disabled={!canStart()}
             onClick={() => { if (canStart()) { startMatch(); } }}
           >
-            {lobby.mode === 'solo' 
-              ? (canStart() ? 'START MATCH' : 'SELECT SONG & CHARACTER')
-              : (canStart() ? 'START MATCH' : 'BOTH PLAYERS MUST BE READY')
-            }
+            {lobby.mode === 'solo' ? (canStart() ? 'START MATCH' : 'SELECT SONG & CHARACTER') : (canStart() ? (lobby.side === 'red' ? 'START MATCH' : 'WAIT FOR HOST') : 'BOTH PLAYERS MUST BE READY')}
           </button>
         </div>
         

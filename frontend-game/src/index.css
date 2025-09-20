@@ -1,0 +1,451 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+
+/* Global pixel font */
+* {
+  font-family: 'Orbitron', 'Press Start 2P', monospace;
+  font-weight: 700;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+/* Pixel-perfect rendering */
+canvas, img, video {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+/* Dark retro background */
+body {
+  background: #0a0a0a;
+  color: #ffffff;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+/* Pixel grid background */
+.pixel-bg {
+  background-color: #0a0a0a;
+  background-image: 
+    linear-gradient(rgba(139, 69, 19, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(139, 69, 19, 0.1) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+/* Brick wall texture */
+.brick-wall {
+  background-color: #1a1a1a;
+  background-image: 
+    repeating-linear-gradient(
+      0deg,
+      #2a2a2a,
+      #2a2a2a 8px,
+      #1a1a1a 8px,
+      #1a1a1a 16px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      #333333,
+      #333333 16px,
+      #222222 16px,
+      #222222 32px
+    );
+}
+
+/* Purple/Pink gradient backgrounds */
+.retro-bg {
+  background: linear-gradient(135deg, 
+    #0a0a0a 0%, 
+    #1a0a1a 25%, 
+    #2a0a2a 50%, 
+    #1a0a1a 75%, 
+    #0a0a0a 100%
+  );
+  position: relative;
+}
+
+.retro-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: 
+    radial-gradient(circle at 20% 20%, rgba(255, 0, 255, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(138, 43, 226, 0.1) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+/* Chunky pixel buttons */
+.pixel-button {
+  background: #2a2a2a;
+  border: 4px solid #666666;
+  color: #ffffff;
+  padding: 12px 24px;
+  font-size: 12px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: none;
+  position: relative;
+  box-shadow: 
+    inset 2px 2px 0px #444444,
+    inset -2px -2px 0px #111111;
+}
+
+.pixel-button:hover {
+  background: #3a3a3a;
+  border-color: #ff00ff;
+  color: #ff00ff;
+  box-shadow: 
+    inset 2px 2px 0px #555555,
+    inset -2px -2px 0px #222222,
+    0 0 8px rgba(255, 0, 255, 0.5);
+}
+
+.pixel-button:active {
+  background: #1a1a1a;
+  box-shadow: 
+    inset -2px -2px 0px #444444,
+    inset 2px 2px 0px #111111;
+}
+
+.pixel-button.selected {
+  background: #4a0a4a;
+  border-color: #ff00ff;
+  color: #ff00ff;
+  box-shadow: 
+    inset 2px 2px 0px #6a0a6a,
+    inset -2px -2px 0px #2a0a2a,
+    0 0 12px rgba(255, 0, 255, 0.8);
+  animation: pixelPulse 1s infinite;
+}
+
+@keyframes pixelPulse {
+  0%, 100% { 
+    box-shadow: 
+      inset 2px 2px 0px #6a0a6a,
+      inset -2px -2px 0px #2a0a2a,
+      0 0 12px rgba(255, 0, 255, 0.8);
+  }
+  50% { 
+    box-shadow: 
+      inset 2px 2px 0px #6a0a6a,
+      inset -2px -2px 0px #2a0a2a,
+      0 0 20px rgba(255, 0, 255, 1);
+  }
+}
+
+/* Pixel panels */
+.pixel-panel {
+  background: #1a1a1a;
+  border: 4px solid #444444;
+  box-shadow: 
+    inset 2px 2px 0px #333333,
+    inset -2px -2px 0px #0a0a0a;
+  position: relative;
+}
+
+.pixel-panel.highlighted {
+  border-color: #ff00ff;
+  box-shadow: 
+    inset 2px 2px 0px #333333,
+    inset -2px -2px 0px #0a0a0a,
+    0 0 16px rgba(255, 0, 255, 0.6);
+}
+
+.pixel-panel.outlined {
+  border-color: #8a2be2;
+  box-shadow: 
+    inset 2px 2px 0px #333333,
+    inset -2px -2px 0px #0a0a0a,
+    0 0 12px rgba(138, 43, 226, 0.5);
+}
+
+/* Pixel text effects */
+.pixel-glow-pink {
+  color: #ff00ff;
+  text-shadow: 
+    2px 0 0 #ff00ff,
+    -2px 0 0 #ff00ff,
+    0 2px 0 #ff00ff,
+    0 -2px 0 #ff00ff;
+}
+
+.pixel-glow-purple {
+  color: #8a2be2;
+  text-shadow: 
+    2px 0 0 #8a2be2,
+    -2px 0 0 #8a2be2,
+    0 2px 0 #8a2be2,
+    0 -2px 0 #8a2be2;
+}
+
+.pixel-glow-white {
+  color: #ffffff;
+  text-shadow: 
+    2px 0 0 #ffffff,
+    -2px 0 0 #ffffff,
+    0 2px 0 #ffffff,
+    0 -2px 0 #ffffff;
+}
+
+/* Blinking text animation */
+.pixel-blink {
+  animation: pixelBlink 1.5s infinite;
+}
+
+@keyframes pixelBlink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+/* Flashing border animation */
+.pixel-flash-border {
+  animation: pixelFlashBorder 0.8s infinite;
+}
+
+@keyframes pixelFlashBorder {
+  0%, 100% { border-color: #444444; }
+  50% { border-color: #ff00ff; }
+}
+
+/* Scanline overlay */
+.scanlines {
+  position: relative;
+}
+
+.scanlines::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.3) 2px,
+    rgba(0, 0, 0, 0.3) 4px
+  );
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Game container centering */
+.game-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* Pixel lane colors */
+.lane-green {
+  background: #00ff00;
+  border: 2px solid #00cc00;
+  box-shadow: inset 1px 1px 0px #44ff44, inset -1px -1px 0px #00aa00;
+}
+
+.lane-red {
+  background: #ff0000;
+  border: 2px solid #cc0000;
+  box-shadow: inset 1px 1px 0px #ff4444, inset -1px -1px 0px #aa0000;
+}
+
+.lane-yellow {
+  background: #ffff00;
+  border: 2px solid #cccc00;
+  box-shadow: inset 1px 1px 0px #ffff44, inset -1px -1px 0px #aaaa00;
+}
+
+.lane-blue {
+  background: #0080ff;
+  border: 2px solid #0066cc;
+  box-shadow: inset 1px 1px 0px #44aaff, inset -1px -1px 0px #0055aa;
+}
+
+/* Pixel health bar */
+.pixel-health-bar {
+  background: #2a2a2a;
+  border: 2px solid #666666;
+  height: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.pixel-health-fill {
+  height: 100%;
+  transition: width 0.3s ease;
+  position: relative;
+}
+
+.pixel-health-fill.high {
+  background: #00ff00;
+  box-shadow: inset 0 2px 0px #44ff44, inset 0 -2px 0px #00aa00;
+}
+
+.pixel-health-fill.medium {
+  background: #ffff00;
+  box-shadow: inset 0 2px 0px #ffff44, inset 0 -2px 0px #aaaa00;
+}
+
+.pixel-health-fill.low {
+  background: #ff0000;
+  box-shadow: inset 0 2px 0px #ff4444, inset 0 -2px 0px #aa0000;
+}
+
+/* Pixel score display */
+.pixel-score {
+  background: #0a0a0a;
+  border: 3px solid #444444;
+  padding: 8px 16px;
+  box-shadow: 
+    inset 1px 1px 0px #222222,
+    inset -1px -1px 0px #000000;
+}
+
+/* Retro title effect */
+.retro-title {
+  font-family: 'Orbitron', monospace;
+  font-weight: 900;
+  color: #ff00ff;
+  text-shadow: 
+    2px 0 0 #8a2be2,
+    -2px 0 0 #8a2be2,
+    0 2px 0 #8a2be2,
+    0 -2px 0 #8a2be2,
+    2px 2px 0 #4a0a4a,
+    -2px -2px 0 #4a0a4a;
+  animation: retroTitleGlow 3s ease-in-out infinite alternate;
+}
+
+@keyframes retroTitleGlow {
+  from {
+    text-shadow: 
+      2px 0 0 #8a2be2,
+      -2px 0 0 #8a2be2,
+      0 2px 0 #8a2be2,
+      0 -2px 0 #8a2be2,
+      2px 2px 0 #4a0a4a,
+      -2px -2px 0 #4a0a4a;
+  }
+  to {
+    text-shadow: 
+      2px 0 0 #ff00ff,
+      -2px 0 0 #ff00ff,
+      0 2px 0 #ff00ff,
+      0 -2px 0 #ff00ff,
+      2px 2px 0 #6a0a6a,
+      -2px -2px 0 #6a0a6a;
+  }
+}
+
+/* Arcade text style */
+.arcade-text {
+  font-family: 'Orbitron', monospace;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+/* Pixel menu item */
+.pixel-menu-item {
+  background: #2a2a2a;
+  border: 3px solid #555555;
+  padding: 16px;
+  margin: 8px 0;
+  cursor: pointer;
+  transition: none;
+  position: relative;
+  box-shadow: 
+    inset 2px 2px 0px #444444,
+    inset -2px -2px 0px #111111;
+}
+
+.pixel-menu-item:hover {
+  background: #3a3a3a;
+  border-color: #ff00ff;
+  box-shadow: 
+    inset 2px 2px 0px #555555,
+    inset -2px -2px 0px #222222,
+    0 0 12px rgba(255, 0, 255, 0.5);
+}
+
+.pixel-menu-item.selected {
+  background: #4a0a4a;
+  border-color: #ff00ff;
+  box-shadow: 
+    inset 2px 2px 0px #6a0a6a,
+    inset -2px -2px 0px #2a0a2a,
+    0 0 16px rgba(255, 0, 255, 0.8);
+}
+
+/* Pixel arrows */
+.pixel-arrow {
+  width: 0;
+  height: 0;
+  border-style: solid;
+}
+
+.pixel-arrow.right {
+  border-left: 8px solid #ff00ff;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+}
+
+.pixel-arrow.left {
+  border-right: 8px solid #ff00ff;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+}
+
+/* Pixel loading animation */
+.pixel-loading {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  background: #ff00ff;
+  animation: pixelSpin 1s linear infinite;
+}
+
+@keyframes pixelSpin {
+  0% { transform: rotate(0deg); }
+  25% { transform: rotate(90deg); }
+  50% { transform: rotate(180deg); }
+  75% { transform: rotate(270deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .retro-title {
+    font-size: 24px;
+  }
+  
+  .pixel-button {
+    padding: 8px 16px;
+    font-size: 10px;
+  }
+  
+  .game-container {
+    padding: 10px;
+  }
+}
+
+/* Utility classes */
+.text-pixel-pink { color: #ff00ff; }
+.text-pixel-purple { color: #8a2be2; }
+.text-pixel-white { color: #ffffff; }
+.text-pixel-gray { color: #888888; }
+
+.bg-pixel-dark { background-color: #1a1a1a; }
+.bg-pixel-darker { background-color: #0a0a0a; }
+
+.border-pixel-pink { border-color: #ff00ff; }
+.border-pixel-purple { border-color: #8a2be2; }
+.border-pixel-gray { border-color: #444444; }

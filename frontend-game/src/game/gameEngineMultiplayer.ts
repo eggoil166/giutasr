@@ -12,6 +12,7 @@ export interface Note {
   holdDuration?: number;
   holdHeadHitTime?: number;
   releasedEarly?: boolean;
+  track: 'guitar' | 'drum'; // Track type for dual-track system
 }
 
 export interface Judgment {
@@ -39,30 +40,39 @@ export class GameEngine {
   private playfield: THREE.Group | null = null;
   private ringMeshes: THREE.Mesh[] = [];
   private ringGlowMeshes: THREE.Mesh[] = [];
+  private drumRingMeshes: THREE.Mesh[] = [];
+  private drumRingGlowMeshes: THREE.Mesh[] = [];
   private noteHaloMeshes = new Map<string, THREE.Mesh>();
   private noteTailMeshes = new Map<string, THREE.Mesh>();
   private ringGlow: number[] = [0, 0, 0, 0];
+  private drumRingGlow: number[] = [0, 0];
   private ringBaseColors: number[] = [0x00ff00, 0xff0000, 0xffff00, 0x0066ff];
+  private drumRingBaseColors: number[] = [0xff6600, 0x9900ff]; // Orange, Purple for drums (2 lanes)
   private noteHitGlow = new Map<string, number>();
   private noteGeometry: THREE.BufferGeometry | null = null;
   private noteMaterials: THREE.MeshStandardMaterial[] = [];
+  private drumNoteMaterials: THREE.MeshStandardMaterial[] = [];
   private noteHaloMaterial: THREE.MeshBasicMaterial | null = null;
   private tailGeometry: THREE.BoxGeometry | null = null;
   private tailMaterials: THREE.MeshStandardMaterial[] = [];
   private noteMeshes = new Map<string, THREE.Mesh>();
-  private readonly LANE_POSITIONS_3D = [-3, -1, 1, 3];
+  private readonly LANE_POSITIONS_3D = [8, 10, 12, 14]; // 4 guitar lanes on the right
+  private readonly DRUM_LANE_POSITIONS_3D = [-5, -3]; // 2 drum lanes on the left with same spacing as guitar
   private readonly HIT_PLANE_Y = -5.0;
   private readonly Z_PER_MS = 0.02;
   private readonly RING_BASE_EMISSIVE = 0.25;
+  private readonly DRUM_TRACK_ANGLE = Math.PI / 12; // 15 degrees in radians for subtle visual separation
   
   private readonly NOTE_SPEED = 150;
   private readonly HIT_LINE_Y = 400;
   private readonly LANE_POSITIONS = [120, 200, 280, 360];
   private readonly NOTE_SIZE = 25;
-  
+
   private readonly HIT_TARGET_SIZE = 30;
-  private hitTargetGlow: number[] = [0, 0, 0, 0];
-  private hitTargetGlowTime: number[] = [0, 0, 0, 0];
+  private hitTargetGlow: number[] = [0, 0, 0, 0]; // Guitar track glow
+  private hitTargetGlowTime: number[] = [0, 0, 0, 0]; // Guitar track glow time
+  private drumHitTargetGlow: number[] = [0, 0]; // Drum track glow (2 lanes)
+  private drumHitTargetGlowTime: number[] = [0, 0]; // Drum track glow time
 
   private bearProgress = 10.0;
   private manProgress = 0.0;
@@ -105,6 +115,16 @@ export class GameEngine {
         this.spacebarPressed = true;
         this.spacebarBoostMultiplier = 2.0;
         console.log('Spacebar pressed - Bear boost activated!');
+      }
+      
+      // Handle drum track inputs (L and A keys)
+      const key = event.key.toLowerCase();
+      if (key === 'l') {
+        event.preventDefault();
+        this.handleInput(0, 'hit', 1, 'drum');
+      } else if (key === 'a') {
+        event.preventDefault();
+        this.handleInput(1, 'hit', 1, 'drum');
       }
     });
     
@@ -157,7 +177,8 @@ export class GameEngine {
         ...note,
         y: -this.NOTE_SIZE,
         glowIntensity: 0,
-        glowTime: 0
+        glowTime: 0,
+        track: 'guitar' // Default to guitar track for now
       }));
       this.totalNotes = gameNotes.length;
       this.notes.sort((a, b) => a.time - b.time);
@@ -180,11 +201,11 @@ export class GameEngine {
       this.totalNotes = 0;
     }
   }
-  
+
   start(songId?: string) {
-  // Ensure only one loop is running
-  if (this.running) this.stop();
-  this.running = true;
+    // Ensure only one loop is running
+    if (this.running) this.stop();
+    this.running = true;
     
     // Reset chase mechanics
     this.bearProgress = 10.0;
@@ -196,7 +217,7 @@ export class GameEngine {
     this.spacebarPressed = false;
     this.spacebarBoostMultiplier = 1.0;
     
-  if (songId) {
+    if (songId) {
       // kick off chart load and audio
       this.generateChartFromFile(songId).catch(err => console.error('ChartLoadError', err));
       this.playMusic(songId);
@@ -204,7 +225,7 @@ export class GameEngine {
     this.startTime = performance.now();
     
     // Start game loop
-  this.rafId = requestAnimationFrame(this.gameLoop);
+    this.rafId = requestAnimationFrame(this.gameLoop);
   }
   
   private playMusic(songId: string) {
@@ -285,11 +306,19 @@ export class GameEngine {
       this.updateThreeNotes();
     }
     
-     // Update hit target glow effects
+     // Update hit target glow effects for guitar track
      for (let i = 0; i < 4; i++) {
        if (this.hitTargetGlowTime[i] > 0) {
          this.hitTargetGlowTime[i] -= 16; // Assuming 60fps
          this.hitTargetGlow[i] = Math.max(0, this.hitTargetGlowTime[i] / 300); // Fade over 300ms
+       }
+     }
+     
+     // Update hit target glow effects for drum track
+     for (let i = 0; i < 2; i++) {
+       if (this.drumHitTargetGlowTime[i] > 0) {
+         this.drumHitTargetGlowTime[i] -= 16; // Assuming 60fps
+         this.drumHitTargetGlow[i] = Math.max(0, this.drumHitTargetGlowTime[i] / 300); // Fade over 300ms
        }
      }
      
@@ -309,7 +338,7 @@ export class GameEngine {
          console.log('Man caught the bear!');
        }
      }
-  }
+   }
   
   private render() {
     // Render 3D scene first (background)
@@ -322,25 +351,25 @@ export class GameEngine {
 
     // If 3D enabled, skip 2D lane guides and hit line
     if (!this.threeEnabled) {
-    // Draw all 4 lanes
-    this.LANE_POSITIONS.forEach(x => this.drawLane(x));
-    
-    // Draw hit line (horizontal)
-    this.ctx.strokeStyle = '#ff00ff';
-    this.ctx.lineWidth = 4;
-    this.ctx.shadowColor = '#ff00ff';
-    this.ctx.shadowBlur = 10;
-    this.ctx.beginPath();
-    this.ctx.moveTo(80, this.HIT_LINE_Y);
-    this.ctx.lineTo(400, this.HIT_LINE_Y);
-    this.ctx.stroke();
-    this.ctx.shadowBlur = 0;
+      // Draw all 4 lanes
+      this.LANE_POSITIONS.forEach(x => this.drawLane(x));
+      
+      // Draw hit line (horizontal)
+      this.ctx.strokeStyle = '#ff00ff';
+      this.ctx.lineWidth = 4;
+      this.ctx.shadowColor = '#ff00ff';
+      this.ctx.shadowBlur = 10;
+      this.ctx.beginPath();
+      this.ctx.moveTo(80, this.HIT_LINE_Y);
+      this.ctx.lineTo(400, this.HIT_LINE_Y);
+      this.ctx.stroke();
+      this.ctx.shadowBlur = 0;
     }
     
     // If 3D enabled, skip drawing 2D notes to avoid duplication
     if (!this.threeEnabled) {
       const now = this.currentTime;
-    this.notes.forEach(note => {
+      this.notes.forEach(note => {
         const sustainActive = !!(note.holdDuration && note.holdHeadHitTime !== undefined && !note.releasedEarly && now < (note.holdHeadHitTime + note.holdDuration));
         if ((!note.hit || sustainActive) && note.y > -this.NOTE_SIZE - 400 && note.y < this.canvas.height + this.NOTE_SIZE) {
           this.drawNote(note, sustainActive);
@@ -355,13 +384,13 @@ export class GameEngine {
     
     // Skip top lane labels
     
-    // Draw accuracy info
-    this.ctx.fillStyle = '#ff00ff';
-    this.ctx.font = '10px "Press Start 2P"';
-    this.ctx.fillText(`Accuracy: ${this.calculateAccuracy().toFixed(1)}%`, this.canvas.width / 2, 20);
-    this.ctx.fillText(`P:${this.perfectHits} G:${this.greatHits} OK:${this.goodHits} X:${this.missedHits}`, this.canvas.width / 2, 35);
+     // Draw accuracy info
+     this.ctx.fillStyle = '#ff00ff';
+     this.ctx.font = '10px "Press Start 2P"';
+     this.ctx.fillText(`Accuracy: ${this.calculateAccuracy().toFixed(1)}%`, this.canvas.width / 2, 20);
+     this.ctx.fillText(`P:${this.perfectHits} G:${this.greatHits} OK:${this.goodHits} X:${this.missedHits}`, this.canvas.width / 2, 35);
   // External UI now renders chase progress bar; removed internal draw to avoid duplication
-  }
+   }
   
   private drawLane(x: number) {
     // Draw lane guide line
@@ -374,7 +403,7 @@ export class GameEngine {
     this.ctx.stroke();
     this.ctx.setLineDash([]);
   }
-  
+
   // --- Three.js helpers ---
   private initThree() {
     try {
@@ -386,7 +415,7 @@ export class GameEngine {
       this.renderer.setPixelRatio(window.devicePixelRatio || 1);
       this.renderer.setSize(this.canvas.width, this.canvas.height);
       this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-      this.renderer.setClearColor(0x000000, 0);
+      this.renderer.setClearColor(0x000000, 0); // Transparent background
       const glCanvas = this.renderer.domElement;
       this.threeCanvas = glCanvas;
       glCanvas.style.position = 'absolute';
@@ -401,11 +430,11 @@ export class GameEngine {
       
       // Scene and camera
       this.scene = new THREE.Scene();
-      this.scene.background = null; // transparent to show page bg
-      this.camera = new THREE.PerspectiveCamera(42, this.canvas.width / this.canvas.height, 0.1, 1000);
-      // Same angle, closer for a tighter view
-      this.camera.position.set(0, 4.5, -10);
-      this.camera.lookAt(new THREE.Vector3(0, 0, 0));
+      this.scene.background = null; // Transparent background
+      this.camera = new THREE.PerspectiveCamera(63, this.canvas.width / this.canvas.height, 0.1, 1000); // Zoom out 5% to fit both tracks in frame
+      // Position camera to view both tracks - drums on left, guitar on right
+      this.camera.position.set(4.5, 4.5, -10); // Center camera between leftmost (-5) and rightmost (14) tracks
+      this.camera.lookAt(new THREE.Vector3(4.5, 0, 0)); // Look at true center point between all tracks
 
       // Playfield group angled slightly for a top view
       this.playfield = new THREE.Group();
@@ -420,27 +449,51 @@ export class GameEngine {
       
       // Grid removed to keep only lane divider lines visible
 
-      // Lane divider bars (thick, high-contrast)
-      const laneXs: number[] = [0, 1, 2, 3].map(i => this.getLaneX(i as 0|1|2|3));
+      // Guitar track lane divider bars (straight)
+      const guitarLaneXs: number[] = [0, 1, 2, 3].map(i => this.getLaneX(i as 0|1|2|3));
       const dividerGeo = new THREE.BoxGeometry(0.12, 0.05, 160);
-      const dividerMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x9b59ff, emissiveIntensity: 0.9, metalness: 0.2, roughness: 0.4 });
+      const guitarDividerMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x9b59ff, emissiveIntensity: 0.9, metalness: 0.2, roughness: 0.4 });
       const centerZ = 80;
-      for (let i = 0; i < laneXs.length - 1; i++) {
-        const xMid = (laneXs[i] + laneXs[i + 1]) / 2;
-        const bar = new THREE.Mesh(dividerGeo, dividerMat);
+      
+      // Guitar track dividers (straight)
+      for (let i = 0; i < guitarLaneXs.length - 1; i++) {
+        const xMid = (guitarLaneXs[i] + guitarLaneXs[i + 1]) / 2;
+        const bar = new THREE.Mesh(dividerGeo, guitarDividerMat);
         bar.position.set(xMid, this.HIT_PLANE_Y + 0.03, centerZ);
         this.playfield.add(bar);
       }
-      // Optional outer boundary lines
-      const dx = laneXs[1] - laneXs[0];
-      const leftEdge = new THREE.Mesh(dividerGeo, dividerMat);
-      leftEdge.position.set(laneXs[0] - dx / 2, this.HIT_PLANE_Y + 0.03, centerZ);
-      this.playfield.add(leftEdge);
-      const rightEdge = new THREE.Mesh(dividerGeo, dividerMat);
-      rightEdge.position.set(laneXs[3] + dx / 2, this.HIT_PLANE_Y + 0.03, centerZ);
-      this.playfield.add(rightEdge);
+      // Guitar track outer boundary lines
+      const guitarDx = guitarLaneXs[1] - guitarLaneXs[0];
+      const guitarLeftEdge = new THREE.Mesh(dividerGeo, guitarDividerMat);
+      guitarLeftEdge.position.set(guitarLaneXs[0] - guitarDx / 2, this.HIT_PLANE_Y + 0.03, centerZ);
+      this.playfield.add(guitarLeftEdge);
+      const guitarRightEdge = new THREE.Mesh(dividerGeo, guitarDividerMat);
+      guitarRightEdge.position.set(guitarLaneXs[3] + guitarDx / 2, this.HIT_PLANE_Y + 0.03, centerZ);
+      this.playfield.add(guitarRightEdge);
+      
+      // Drum track lane divider bars (pivoted 15 degrees) - 2 lanes
+      const drumLaneXs: number[] = [0, 1].map(i => this.getDrumLaneX(i));
+      const drumDividerMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xff6600, emissiveIntensity: 0.9, metalness: 0.2, roughness: 0.4 });
+      
+      // Drum track dividers (pivoted) - only one divider between 2 lanes
+      const xMid = (drumLaneXs[0] + drumLaneXs[1]) / 2;
+      const bar = new THREE.Mesh(dividerGeo, drumDividerMat);
+      bar.position.set(xMid, this.HIT_PLANE_Y + 0.03, centerZ);
+      // bar.rotation.z = this.DRUM_TRACK_ANGLE; // Temporarily remove rotation to test positioning
+      this.playfield.add(bar);
+      
+      // Drum track outer boundary lines (pivoted)
+      const drumDx = drumLaneXs[1] - drumLaneXs[0];
+      const drumLeftEdge = new THREE.Mesh(dividerGeo, drumDividerMat);
+      drumLeftEdge.position.set(drumLaneXs[0] - drumDx / 2, this.HIT_PLANE_Y + 0.03, centerZ);
+      // drumLeftEdge.rotation.z = this.DRUM_TRACK_ANGLE; // Temporarily remove rotation to test positioning
+      this.playfield.add(drumLeftEdge);
+      const drumRightEdge = new THREE.Mesh(dividerGeo, drumDividerMat);
+      drumRightEdge.position.set(drumLaneXs[1] + drumDx / 2, this.HIT_PLANE_Y + 0.03, centerZ);
+      // drumRightEdge.rotation.z = this.DRUM_TRACK_ANGLE; // Temporarily remove rotation to test positioning
+      this.playfield.add(drumRightEdge);
 
-      // Track and hit rings (slightly smaller than note disk)
+      // Track and hit rings for guitar track (slightly smaller than note disk)
       const ringGeo = new THREE.TorusGeometry(0.7, 0.07, 16, 48);
       // Additive outer glow ring (larger tube and radius)
       const ringGlowGeo = new THREE.TorusGeometry(0.74, 0.18, 16, 48);
@@ -452,6 +505,8 @@ export class GameEngine {
         blending: THREE.AdditiveBlending,
       });
       const laneColors = [0x00ff00, 0xff0000, 0xffff00, 0x0066ff];
+      
+      // Create guitar track rings
       for (let i = 0 as 0|1|2|3; i < 4; i = (i + 1) as 0|1|2|3) {
         const x = this.getLaneX(i);
         const mat = new THREE.MeshStandardMaterial({ color: laneColors[i], emissive: laneColors[i], emissiveIntensity: this.RING_BASE_EMISSIVE, metalness: 0.0, roughness: 0.9 });
@@ -468,6 +523,31 @@ export class GameEngine {
         this.playfield!.add(ringGlow);
         this.ringGlowMeshes[i] = ringGlow;
       }
+      
+      // Create drum track rings (pivoted 15 degrees) - 2 lanes
+      for (let i = 0; i < 2; i++) {
+        const x = this.getDrumLaneX(i);
+        const mat = new THREE.MeshStandardMaterial({ 
+          color: this.drumRingBaseColors[i], 
+          emissive: this.drumRingBaseColors[i], 
+          emissiveIntensity: this.RING_BASE_EMISSIVE, 
+          metalness: 0.0, 
+          roughness: 0.9 
+        });
+        const ring = new THREE.Mesh(ringGeo, mat);
+        ring.position.set(x, this.HIT_PLANE_Y, 0);
+        ring.rotation.x = Math.PI / 2;
+        // ring.rotation.z = this.DRUM_TRACK_ANGLE; // Temporarily remove rotation to test positioning
+        this.playfield!.add(ring);
+        this.drumRingMeshes[i] = ring;
+
+        const ringGlow = new THREE.Mesh(ringGlowGeo, ringGlowMatBase.clone());
+        ringGlow.position.copy(ring.position);
+        ringGlow.rotation.copy(ring.rotation);
+        ringGlow.visible = false;
+        this.playfield!.add(ringGlow);
+        this.drumRingGlowMeshes[i] = ringGlow;
+      }
       ringGeo.dispose();
       ringGlowGeo.dispose();
       
@@ -478,6 +558,12 @@ export class GameEngine {
         new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0x330000, metalness: 0.1, roughness: 0.4 }),
         new THREE.MeshStandardMaterial({ color: 0xffff00, emissive: 0x333300, metalness: 0.1, roughness: 0.4 }),
         new THREE.MeshStandardMaterial({ color: 0x0066ff, emissive: 0x001133, metalness: 0.1, roughness: 0.4 }),
+      ];
+      
+      // Drum note materials (different colors for drum track - 2 lanes)
+      this.drumNoteMaterials = [
+        new THREE.MeshStandardMaterial({ color: 0xff6600, emissive: 0x331100, metalness: 0.1, roughness: 0.4 }),
+        new THREE.MeshStandardMaterial({ color: 0x9900ff, emissive: 0x220033, metalness: 0.1, roughness: 0.4 }),
       ];
 
       this.noteHaloMaterial = new THREE.MeshBasicMaterial({
@@ -501,7 +587,7 @@ export class GameEngine {
       console.warn('ThreeInitFailed', e);
       this.threeEnabled = false;
     }
-    // Animate ring glow/scale feedback decay (ring turns white while glowing)
+    // Animate guitar ring glow/scale feedback decay (ring turns white while glowing)
     for (let i = 0; i < this.ringMeshes.length; i++) {
       const ring = this.ringMeshes[i];
       if (!ring) continue;
@@ -535,6 +621,41 @@ export class GameEngine {
       // slower decay so it lingers a bit longer
       this.ringGlow[i] = Math.max(0, g - 0.03);
     }
+    
+    // Animate drum ring glow/scale feedback decay
+    for (let i = 0; i < this.drumRingMeshes.length; i++) {
+      const ring = this.drumRingMeshes[i];
+      if (!ring) continue;
+      const mat = ring.material as THREE.MeshStandardMaterial;
+      const g = this.drumRingGlow[i] || 0;
+      if (g > 0.01) {
+        mat.color.setHex(0xffffff);
+        mat.emissive.setHex(0xffffff);
+        mat.emissiveIntensity = this.RING_BASE_EMISSIVE + g * 3.2;
+      } else {
+        mat.color.setHex(this.drumRingBaseColors[i]);
+        mat.emissive.setHex(this.drumRingBaseColors[i]);
+        mat.emissiveIntensity = this.RING_BASE_EMISSIVE;
+      }
+      const s = 1 + g * 0.45;
+      ring.scale.set(s, s, s);
+      // Outer additive glow ring
+      const ringGlowMesh = this.drumRingGlowMeshes[i];
+      if (ringGlowMesh) {
+        const m = ringGlowMesh.material as THREE.MeshBasicMaterial;
+        if (g > 0.01) {
+          ringGlowMesh.visible = true;
+          const pulse = 0.6 + 0.4 * Math.sin(this.currentTime / 70);
+          m.opacity = Math.min(1, 0.25 + g * 0.55 * pulse);
+          ringGlowMesh.scale.set(1 + g * 0.2, 1 + g * 0.2, 1 + g * 0.2);
+        } else {
+          ringGlowMesh.visible = false;
+          m.opacity = 0;
+        }
+      }
+      // slower decay so it lingers a bit longer
+      this.drumRingGlow[i] = Math.max(0, g - 0.03);
+    }
   }
 
   private timeToZ(noteTimeMs: number): number {
@@ -545,7 +666,17 @@ export class GameEngine {
 
   private getLaneX(lane: 0|1|2|3): number {
     // Flip orientation so lane 0 (green) is leftmost and lane 3 (blue) rightmost
-    return this.LANE_POSITIONS_3D[3 - lane];
+    const x = this.LANE_POSITIONS_3D[3 - lane];
+    console.log(`Guitar lane ${lane} positioned at x=${x}`);
+    return x;
+  }
+  
+  private getDrumLaneX(lane: 0|1): number {
+    // Drum lanes positioned to the right of guitar lanes
+    // Based on paint visualization: drum track should be clearly separated and angled
+    const x = this.DRUM_LANE_POSITIONS_3D[lane]; // Direct positioning to the right
+    console.log(`Drum lane ${lane} positioned at x=${x}`);
+    return x;
   }
 
   private syncThreeNoteMeshes() {
@@ -570,14 +701,29 @@ export class GameEngine {
     // Create meshes for notes missing a mesh
     for (const n of this.notes) {
       if (this.noteMeshes.has(n.id)) continue;
-      const mesh = new THREE.Mesh(this.noteGeometry, this.noteMaterials[n.lane]);
-      mesh.position.set(this.getLaneX(n.lane), this.HIT_PLANE_Y, this.timeToZ(n.time));
+      
+      // Choose material based on track type
+      const material = n.track === 'drum' 
+        ? this.drumNoteMaterials[n.lane] 
+        : this.noteMaterials[n.lane];
+      
+      const mesh = new THREE.Mesh(this.noteGeometry, material);
+      
+      // Position based on track type
+      if (n.track === 'drum') {
+        mesh.position.set(this.getDrumLaneX(n.lane), this.HIT_PLANE_Y, this.timeToZ(n.time));
+        // mesh.rotation.z = this.DRUM_TRACK_ANGLE; // Temporarily remove rotation to test positioning
+      } else {
+        mesh.position.set(this.getLaneX(n.lane), this.HIT_PLANE_Y, this.timeToZ(n.time));
+      }
+      
       this.playfield!.add(mesh);
       this.noteMeshes.set(n.id, mesh);
 
       if (this.noteHaloMaterial) {
         const halo = new THREE.Mesh(this.noteGeometry, this.noteHaloMaterial);
         halo.position.copy(mesh.position);
+        halo.rotation.copy(mesh.rotation);
         halo.scale.set(1.6, 1.6, 1.6);
         this.playfield!.add(halo);
         this.noteHaloMeshes.set(n.id, halo);
@@ -586,7 +732,8 @@ export class GameEngine {
       // Tail for sustain notes
       if (n.holdDuration && n.holdDuration > 0 && this.tailGeometry) {
         const tail = new THREE.Mesh(this.tailGeometry, this.tailMaterials[n.lane]);
-        tail.position.set(this.getLaneX(n.lane), this.HIT_PLANE_Y, this.timeToZ(n.time));
+        tail.position.copy(mesh.position);
+        tail.rotation.copy(mesh.rotation);
         this.playfield!.add(tail);
         this.noteTailMeshes.set(n.id, tail);
       }
@@ -680,14 +827,14 @@ export class GameEngine {
     // If spacebar is pressed, make notes glow bright
     if (this.spacebarPressed) {
       // Intense glow effect for spacebar boost
-    this.ctx.shadowColor = colors.glow;
+      this.ctx.shadowColor = colors.glow;
       this.ctx.shadowBlur = 20;
-    
+      
       // Draw multiple glowing circles for bright effect
       for (let i = 0; i < 3; i++) {
         const alpha = 0.6 - i * 0.15;
         this.ctx.globalAlpha = alpha;
-    this.ctx.fillStyle = colors.primary;
+        this.ctx.fillStyle = colors.primary;
         this.ctx.beginPath();
         this.ctx.arc(x, note.y, this.NOTE_SIZE * (0.8 + i * 0.3), 0, Math.PI * 2);
         this.ctx.fill();
@@ -800,12 +947,17 @@ export class GameEngine {
     });
   }
 
-  handleInput(lane: 0 | 1 | 2 | 3, _inputType: 'hit', player: number): { judgment: Judgment | null; note: Note | null; accuracy: number } {
+  handleInput(lane: 0 | 1 | 2 | 3, _inputType: 'hit', player: number, track: 'guitar' | 'drum' = 'guitar'): { judgment: Judgment | null; note: Note | null; accuracy: number } {
     // Immediate visual feedback on key press: pulse ring
-    this.ringGlow[lane] = 1.0;
+    if (track === 'guitar') {
+      this.ringGlow[lane] = 1.0;
+    } else {
+      this.drumRingGlow[lane] = 1.0;
+    }
+    
     // Time-based detection at the 3D ring plane (z=0)
     const now = this.currentTime;
-    const laneNotes = this.notes.filter(note => note.lane === lane && !note.hit);
+    const laneNotes = this.notes.filter(note => note.lane === lane && !note.hit && note.track === track);
     if (laneNotes.length === 0) {
       this.missedHits++;
       const accuracy = this.calculateAccuracy();
@@ -816,7 +968,7 @@ export class GameEngine {
       }
       return { judgment: { type: 'Miss', score: 0 }, note: null, accuracy };
     }
-    
+
     // Find the closest by absolute time difference
     const closestNote = laneNotes.reduce((closest, note) => {
       const a = Math.abs((closest.time) - now);
@@ -829,7 +981,7 @@ export class GameEngine {
     if (closestNote.holdDuration) {
       closestNote.holdHeadHitTime = this.currentTime;
     }
-
+    
     // Determine judgment
     let judgment: Judgment;
     const baseScore = 100;
@@ -874,13 +1026,13 @@ export class GameEngine {
     return Math.max(0, Math.min(100, (weightedHits / processed) * 100));
   }
   
-  getStats() {
-    return {
-      totalNotes: this.perfectHits + this.greatHits + this.goodHits + this.missedHits,
-      perfectHits: this.perfectHits,
-      greatHits: this.greatHits,
-      goodHits: this.goodHits,
-      missedHits: this.missedHits,
+   getStats() {
+     return {
+       totalNotes: this.perfectHits + this.greatHits + this.goodHits + this.missedHits,
+       perfectHits: this.perfectHits,
+       greatHits: this.greatHits,
+       goodHits: this.goodHits,
+       missedHits: this.missedHits,
        accuracy: this.calculateAccuracy(),
        bearProgress: this.bearProgress,
        manProgress: this.manProgress,
@@ -888,8 +1040,8 @@ export class GameEngine {
        gameResult: this.gameResult,
        spacebarPressed: this.spacebarPressed,
        spacebarBoostMultiplier: this.spacebarBoostMultiplier
-    };
-  }
+     };
+   }
   
   pause() {
     if (this.audioElement) {
@@ -937,6 +1089,33 @@ export class GameEngine {
   setVolume(volume: number) {
     this.gainNode.gain.value = volume;
   }
+  
+  // Method to add drum notes for testing
+  addDrumNote(lane: 0 | 1, time: number, holdDuration?: number) {
+    const note: Note = {
+      id: `drum_${Date.now()}_${Math.random()}`,
+      lane,
+      type: 'note',
+      time,
+      y: -this.NOTE_SIZE,
+      hit: false,
+      glowIntensity: 0,
+      glowTime: 0,
+      track: 'drum',
+      holdDuration
+    };
+    
+    this.notes.push(note);
+    this.notes.sort((a, b) => a.time - b.time);
+    this.totalNotes++;
+    
+    // Create 3D mesh for the drum note
+    if (this.threeEnabled) {
+      this.syncThreeNoteMeshes();
+    }
+    
+    return note;
+  }
 
   handleRelease(lane: 0|1|2|3) {
     const now = this.currentTime;
@@ -983,6 +1162,8 @@ export class GameEngine {
       // Dispose shared note resources
       this.noteMaterials.forEach(m => m.dispose());
       this.noteMaterials = [];
+      this.drumNoteMaterials.forEach(m => m.dispose());
+      this.drumNoteMaterials = [];
       if (this.noteGeometry) {
         this.noteGeometry.dispose();
         this.noteGeometry = null;

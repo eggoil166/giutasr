@@ -18,7 +18,7 @@ export const LobbyScreen: React.FC = () => {
           <h1 className="text-6xl font-black graffiti-text bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent mb-4">
             LOBBY
           </h1>
-          <p className="text-gray-200 arcade-text font-bold">Setup your battle arena</p>
+          <p className="text-gray-200 arcade-text">Setup your battle arena</p>
         </div>
         
         {/* Lobby Options */}
@@ -27,7 +27,7 @@ export const LobbyScreen: React.FC = () => {
             {/* Host Lobby */}
             <PixelPanel>
               <div className="text-center">
-                <h3 className="text-2xl font-bold text-white mb-4">HOST LOBBY</h3>
+                <h3 className="text-2xl text-white mb-4">HOST LOBBY</h3>
                 <p className="text-gray-300 mb-6">Create a room for others to join</p>
                 <NeonButton variant="primary" onClick={hostLobby}>
                   CREATE ROOM
@@ -38,7 +38,7 @@ export const LobbyScreen: React.FC = () => {
             {/* Join Lobby */}
             <PixelPanel>
               <div className="text-center">
-                <h3 className="text-2xl font-bold text-white mb-4">JOIN LOBBY</h3>
+                <h3 className="text-2xl text-white mb-4">JOIN LOBBY</h3>
                 <p className="text-gray-300 mb-6">Enter a room code to join</p>
                 <div className="space-y-4">
                   <input
@@ -67,7 +67,7 @@ export const LobbyScreen: React.FC = () => {
           <div className="space-y-8">
             {/* Room Code Display */}
             <PixelPanel variant="outlined" className="text-center">
-              <h3 className="text-2xl font-bold text-white mb-4">ROOM CODE</h3>
+              <h3 className="text-2xl text-white mb-4">ROOM CODE</h3>
               <div className="text-6xl font-black font-mono text-cyan-400 tracking-wider mb-4">
                 {lobby.code}
               </div>
@@ -79,11 +79,11 @@ export const LobbyScreen: React.FC = () => {
               {/* Player 1 */}
               <PixelPanel>
                 <div className="text-center">
-                  <h4 className="text-xl font-bold text-white mb-4">PLAYER 1</h4>
+                  <h4 className="text-xl text-white mb-4">PLAYER 1</h4>
                   <div className="w-16 h-16 bg-gradient-to-br from-pink-500 to-purple-600 rounded-full mx-auto mb-4 flex items-center justify-center">
                     <span className="text-2xl">👤</span>
                   </div>
-                  <div className="text-green-400 font-bold">READY</div>
+                  <div className="text-green-400">READY</div>
                   <p className="text-gray-300 text-sm mt-2">
                     {players.p1.characterId?.toUpperCase() || 'No character'}
                   </p>
@@ -93,13 +93,13 @@ export const LobbyScreen: React.FC = () => {
               {/* Player 2 */}
               <PixelPanel>
                 <div className="text-center">
-                  <h4 className="text-xl font-bold text-white mb-4">PLAYER 2</h4>
+                  <h4 className="text-xl text-white mb-4">PLAYER 2</h4>
                   <div className="w-16 h-16 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-full mx-auto mb-4 flex items-center justify-center">
                     <span className="text-2xl">
                       {lobby.connectedP2 ? '👤' : '⏳'}
                     </span>
                   </div>
-                  <div className={`font-bold ${lobby.connectedP2 ? 'text-green-400' : 'text-yellow-400'}`}>
+                  <div className={`${lobby.connectedP2 ? 'text-green-400' : 'text-yellow-400'}`}> 
                     {lobby.connectedP2 ? 'READY' : 'WAITING...'}
                   </div>
                   <p className="text-gray-300 text-sm mt-2">

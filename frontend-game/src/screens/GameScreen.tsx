@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { GameEngine, Note, Judgment } from '../game/gameEngine';
+import { GameEngine as MultiplayerGameEngine } from '../game/gameEngineMultiplayer';
 import { InputHandler, InputEvent } from '../game/inputHandler';
 
 declare global {
@@ -12,7 +13,7 @@ declare global {
 
 export const GameScreen: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const gameEngineRef = useRef<GameEngine | null>(null);
+  const gameEngineRef = useRef<GameEngine | MultiplayerGameEngine | null>(null);
   const inputHandlerRef = useRef<InputHandler | null>(null);
   
   const { 
@@ -111,8 +112,11 @@ export const GameScreen: React.FC = () => {
   const initialVolume = Math.max(0, Math.min(1, settings.volume ?? 1));
   gainNode.gain.value = initialVolume;
     
-    // Initialize game systems
-    gameEngineRef.current = new GameEngine(canvasRef.current, audioContext, gainNode);
+    // Initialize game systems - use multiplayer engine if multiplayer mode is selected
+    const isMultiplayer = lobby.mode === 'host' || lobby.mode === 'join' || lobby.connectedP2;
+    gameEngineRef.current = isMultiplayer 
+      ? new MultiplayerGameEngine(canvasRef.current, audioContext, gainNode)
+      : new GameEngine(canvasRef.current, audioContext, gainNode);
     inputHandlerRef.current = new InputHandler();
     
     // Set up note result callback
@@ -348,8 +352,8 @@ export const GameScreen: React.FC = () => {
         <div className="flex-shrink-0">
           <canvas
             ref={canvasRef}
-            width={600}
-            height={700}
+            width={950}
+            height={670}
             className=""
             style={{ imageRendering: 'pixelated', backgroundColor: 'transparent' }}
           />
@@ -375,10 +379,10 @@ export const GameScreen: React.FC = () => {
           <div className="pixel-panel p-8 text-center">
             <h2 className="retro-title text-3xl mb-6 pixel-glow-pink">PAUSED</h2>
             <div className="space-y-4">
-              <button className="pixel-button w-full" onClick={togglePause}>
+              <button className="nes-btn is-primary w-full" onClick={togglePause}>
                 RESUME
               </button>
-              <button className="pixel-button w-full" onClick={() => setScreen('TITLE')}>
+              <button className="nes-btn w-full" onClick={() => setScreen('TITLE')}>
                 QUIT TO HOME
               </button>
             </div>
@@ -393,13 +397,13 @@ export const GameScreen: React.FC = () => {
             <h2 className="retro-title text-4xl mb-4 pixel-glow-pink">SONG COMPLETE</h2>
             <p className="pixel-glow-purple text-lg mb-6">GREAT JOB!</p>
             <div className="space-y-4">
-              <button className="pixel-button w-full text-lg py-4" onClick={() => setScreen('RESULTS')}>
+              <button className="nes-btn is-success w-full text-lg" onClick={() => setScreen('RESULTS')}>
                 VIEW RESULTS
               </button>
-              <button className="pixel-button w-full" onClick={restartSong}>
+              <button className="nes-btn is-primary w-full" onClick={restartSong}>
                 PLAY AGAIN
               </button>
-              <button className="pixel-button w-full" onClick={() => setScreen('TITLE')}>
+              <button className="nes-btn w-full" onClick={() => setScreen('TITLE')}>
                 QUIT TO MENU
               </button>
             </div>

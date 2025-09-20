@@ -13,8 +13,8 @@ let currentIdentity: unknown | null = null;
 
 export async function connectSpacetime(savedToken?: string): Promise<SpacetimeState> {
   return new Promise((resolve) => {
-    const uri = (import.meta.env.VITE_STDB_URI as string | undefined)?.trim();
-    const moduleName = (import.meta.env.VITE_STDB_MODULE as string | undefined)?.trim();
+  const uri = (import.meta.env.VITE_STDB_URI as string | undefined)?.trim();
+  const moduleName = (import.meta.env.VITE_STDB_MODULE as string | undefined)?.trim();
     const debug = (import.meta.env.VITE_DEBUG_SPACETIMEDB === 'true');
 
     const state: SpacetimeState = { conn: null, identity: null, connected: false, error: null };
@@ -24,6 +24,10 @@ export async function connectSpacetime(savedToken?: string): Promise<SpacetimeSt
       state.error = 'Missing VITE_STDB_URI or VITE_STDB_MODULE';
       resolved = true; resolve(state);
       return;
+    }
+
+    if (debug) {
+      console.log('[SpaceTimeDB] Attempt connect', { uri, moduleName, savedToken: !!savedToken });
     }
 
     const builder = DbConnection.builder()
@@ -38,7 +42,7 @@ export async function connectSpacetime(savedToken?: string): Promise<SpacetimeSt
         currentConn = c as DbConnection;
         currentIdentity = id;
         // Defer subscription until connection is fully established to avoid DOMException
-        try {
+  try {
           (c as DbConnection).subscriptionBuilder().subscribe(['SELECT * FROM user']);
           if (debug) console.log('[SpaceTimeDB] Presence subscription registered');
         } catch (e) {

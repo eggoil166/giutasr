@@ -35,6 +35,7 @@ export interface Gameplay {
   accuracyP1: number;
   accuracyP2: number;
   gameOver: boolean;
+  outcome?: 'bear_escaped' | 'man_caught' | null;
 }
 
 export interface GameState {
@@ -89,6 +90,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     accuracyP1: 100,
     accuracyP2: 100,
     gameOver: false,
+    outcome: null,
   },
 
   setScreen: (screen) => set({ currentScreen: screen }),
@@ -246,6 +248,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         accuracyP1: 100,
         accuracyP2: 100,
         gameOver: false,
+        outcome: null,
       },
     }),
 }));

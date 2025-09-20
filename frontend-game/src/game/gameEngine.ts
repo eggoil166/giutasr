@@ -40,12 +40,15 @@ export class GameEngine {
   private ringMeshes: THREE.Mesh[] = [];
   private ringGlowMeshes: THREE.Mesh[] = [];
   private noteHaloMeshes = new Map<string, THREE.Mesh>();
+  private noteTailMeshes = new Map<string, THREE.Mesh>();
   private ringGlow: number[] = [0, 0, 0, 0];
   private ringBaseColors: number[] = [0x00ff00, 0xff0000, 0xffff00, 0x0066ff];
   private noteHitGlow = new Map<string, number>();
   private noteGeometry: THREE.BufferGeometry | null = null;
   private noteMaterials: THREE.MeshStandardMaterial[] = [];
   private noteHaloMaterial: THREE.MeshBasicMaterial | null = null;
+  private tailGeometry: THREE.BoxGeometry | null = null;
+  private tailMaterials: THREE.MeshStandardMaterial[] = [];
   private noteMeshes = new Map<string, THREE.Mesh>();
   private readonly LANE_POSITIONS_3D = [-3, -1, 1, 3];
   private readonly HIT_PLANE_Y = -5.0;
@@ -74,7 +77,7 @@ export class GameEngine {
 
   private readonly PERFECT_WINDOW = 25;
   private readonly GREAT_WINDOW = 55;
-  private readonly GOOD_WINDOW = 100;
+  private readonly GOOD_WINDOW = 140;
 
   private totalNotes = 0;
   private perfectHits = 0;
@@ -485,6 +488,15 @@ export class GameEngine {
         blending: THREE.AdditiveBlending,
       });
 
+      // Tail geometry and materials (thicker base)
+      this.tailGeometry = new THREE.BoxGeometry(0.25, 0.12, 1);
+      this.tailMaterials = [
+        new THREE.MeshStandardMaterial({ color: 0x00ff00, emissive: 0x006600, transparent: true, opacity: 0.45, metalness: 0.05, roughness: 0.8 }),
+        new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0x660000, transparent: true, opacity: 0.45, metalness: 0.05, roughness: 0.8 }),
+        new THREE.MeshStandardMaterial({ color: 0xffff00, emissive: 0x666600, transparent: true, opacity: 0.45, metalness: 0.05, roughness: 0.8 }),
+        new THREE.MeshStandardMaterial({ color: 0x0066ff, emissive: 0x003388, transparent: true, opacity: 0.45, metalness: 0.05, roughness: 0.8 }),
+      ];
+
     } catch (e) {
       console.warn('ThreeInitFailed', e);
       this.threeEnabled = false;
@@ -570,6 +582,14 @@ export class GameEngine {
         this.playfield!.add(halo);
         this.noteHaloMeshes.set(n.id, halo);
       }
+
+      // Tail for sustain notes
+      if (n.holdDuration && n.holdDuration > 0 && this.tailGeometry) {
+        const tail = new THREE.Mesh(this.tailGeometry, this.tailMaterials[n.lane]);
+        tail.position.set(this.getLaneX(n.lane), this.HIT_PLANE_Y, this.timeToZ(n.time));
+        this.playfield!.add(tail);
+        this.noteTailMeshes.set(n.id, tail);
+      }
     }
     console.log('ThreeNotesCreated', { count: this.noteMeshes.size });
   }
@@ -583,11 +603,30 @@ export class GameEngine {
       mesh.position.z = z;
       const halo = this.noteHaloMeshes.get(n.id);
       if (halo) halo.position.z = z;
+      const tail = this.noteTailMeshes.get(n.id);
       // Fade out when hit or long past
       const sustainActive = !!(n.holdDuration && n.holdHeadHitTime !== undefined && !n.releasedEarly && (this.currentTime < (n.holdHeadHitTime + n.holdDuration)));
       const shouldShow = !n.hit || sustainActive;
       mesh.visible = !!(shouldShow && z > -5 && z < 400);
-      if (halo) halo.visible = this.spacebarPressed;
+      if (halo) halo.visible = this.spacebarPressed || (this.noteHitGlow.get(n.id) || 0) > 0;
+
+      // Update sustain tail position/length/brightness
+      if (tail && n.holdDuration && n.holdDuration > 0) {
+        const durationZ = (n.holdDuration) * this.Z_PER_MS;
+        const clampedLen = Math.max(0.001, durationZ);
+        tail.visible = mesh.visible;
+        tail.position.z = z + clampedLen / 2;
+        const thicknessScale = sustainActive ? 2.0 : 1.2;
+        tail.scale.set(thicknessScale, thicknessScale * 0.8, clampedLen);
+        const tm = tail.material as THREE.MeshStandardMaterial;
+        if (sustainActive) {
+          tm.emissiveIntensity = 3.0;
+          tm.opacity = 0.95;
+        } else {
+          tm.emissiveIntensity = 0.8;
+          tm.opacity = 0.5;
+        }
+      }
 
       // Per-note spacebar glow
       const mat = mesh.material as THREE.MeshStandardMaterial;
@@ -827,9 +866,12 @@ export class GameEngine {
   }
   
   private calculateAccuracy(): number {
-    if (this.totalNotes === 0) return 100;
-    const weightedHits = (this.perfectHits * 1.0) + (this.greatHits * 0.9) + (this.goodHits * 0.8);
-    return (weightedHits / this.totalNotes) * 100;
+    // Accuracy should remain 100 until a non-perfect or miss occurs.
+    const processed = this.perfectHits + this.greatHits + this.goodHits + this.missedHits;
+    if (processed === 0) return 100;
+    // Heavier penalty for non-perfects and misses
+    const weightedHits = (this.perfectHits * 1.0) + (this.greatHits * 0.9) + (this.goodHits * 0.75);
+    return Math.max(0, Math.min(100, (weightedHits / processed) * 100));
   }
   
    getStats() {
@@ -918,6 +960,10 @@ export class GameEngine {
         this.scene?.remove(halo);
       }
       this.noteHaloMeshes.clear();
+      for (const [, tail] of this.noteTailMeshes) {
+        this.scene?.remove(tail);
+      }
+      this.noteTailMeshes.clear();
       
       // Dispose scene objects (geometries/materials)
       if (this.scene) {
@@ -945,6 +991,12 @@ export class GameEngine {
         this.noteHaloMaterial.dispose();
         this.noteHaloMaterial = null;
       }
+      if (this.tailGeometry) {
+        this.tailGeometry.dispose();
+        this.tailGeometry = null;
+      }
+      this.tailMaterials.forEach(m => m.dispose());
+      this.tailMaterials = [];
 
       // Dispose renderer
       if (this.renderer) {

@@ -131,13 +131,10 @@ export const GameScreen: React.FC = () => {
       setBearBoost(stats.spacebarPressed);
       if (stats.gameOver && (stats.gameResult === 'bear_escaped' || stats.gameResult === 'man_caught')) {
         setGameResult(stats.gameResult);
-        // If man caught the bear, immediately end gameplay and go to results
-        if (stats.gameResult === 'man_caught' && !endHandledRef.current) {
+        if (!endHandledRef.current) {
           endHandledRef.current = true;
-          // Stop engine & audio
           engine.stop();
-          updateGameplay({ gameOver: true });
-          // Navigate to results screen
+          updateGameplay({ gameOver: true, outcome: stats.gameResult });
           setScreen('RESULTS');
         }
       }
@@ -210,6 +207,14 @@ export const GameScreen: React.FC = () => {
       gameEngineRef.current.setNoteResultCallback(handleNoteResult);
       gameEngineRef.current.start(song.id);
     }
+  };
+
+  const getRank = (accuracy: number) => {
+    if (accuracy >= 95) return 'S';
+    if (accuracy >= 85) return 'A';
+    if (accuracy >= 75) return 'B';
+    if (accuracy >= 65) return 'C';
+    return 'D';
   };
 
   
@@ -320,6 +325,13 @@ export const GameScreen: React.FC = () => {
             <div className="pixel-glow-purple text-xs">ACCURACY</div>
             <div className="pixel-glow-pink text-sm">
               {((gameplay.accuracyP1 + gameplay.accuracyP2) / 2).toFixed(1)}%
+            </div>
+          </div>
+          <div className="w-1 h-6 bg-pixel-gray"></div>
+          <div className="text-center">
+            <div className="pixel-glow-purple text-xs">GRADE</div>
+            <div className="pixel-glow-pink text-sm">
+              {getRank((gameplay.accuracyP1 + gameplay.accuracyP2) / 2)}
             </div>
           </div>
         </div>

@@ -35,9 +35,9 @@ export const ResultsScreen: React.FC = () => {
   
   const getRank = (accuracy: number) => {
     if (accuracy >= 95) return { rank: 'S', color: 'pixel-glow-pink' };
-    if (accuracy >= 90) return { rank: 'A', color: 'text-yellow-400' };
-    if (accuracy >= 80) return { rank: 'B', color: 'text-green-400' };
-    if (accuracy >= 70) return { rank: 'C', color: 'text-blue-400' };
+    if (accuracy >= 85) return { rank: 'A', color: 'text-yellow-400' };
+    if (accuracy >= 75) return { rank: 'B', color: 'text-green-400' };
+    if (accuracy >= 65) return { rank: 'C', color: 'text-blue-400' };
     return { rank: 'D', color: 'text-red-400' };
   };
   
@@ -51,7 +51,7 @@ export const ResultsScreen: React.FC = () => {
         {/* Title */}
         <div className="text-center mb-12">
           <h1 className="retro-title text-5xl mb-4 pixel-glow-pink">
-            RESULTS
+            {gameplay.outcome === 'bear_escaped' ? 'BEAR ESCAPED' : gameplay.outcome === 'man_caught' ? 'MAN CAUGHT THE BEAR' : 'RESULTS'}
           </h1>
           <div className={`text-8xl font-black mb-4 ${rankInfo.color}`}>
             {rankInfo.rank}

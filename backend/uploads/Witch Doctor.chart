@@ -1,0 +1,120 @@
+[Song]
+Name = witch doctor
+Artist = Cartoons
+Charter = Gemini
+Offset = 0
+Resolution = 192
+Player2 = bass
+Genre = Eurodance
+MediaType = CD
+MusicStream = witch doctor.mp3
+
+[SyncTrack]
+{
+  B 135.000
+}
+
+[Events]
+{
+  E 0 "intro"
+  E 8889 "verse 1"
+  E 20000 "chorus 1"
+  E 31111 "verse 2"
+  E 42222 "chorus 2"
+  E 53333 "bridge"
+  E 64444 "chorus 3"
+  E 75556 "outro"
+}
+
+[ExpertSingle]
+{
+  N 0 0
+  N 192 1
+  N 384 2
+  N 576 3
+  N 768 0
+  N 960 1
+  N 1152 2
+  N 1344 3
+  N 1536 0
+  N 1536 1
+  N 1728 2
+  N 1728 3
+  N 1920 0
+  N 2112 1
+  N 2304 2
+  N 2496 3
+  N 8889 0
+  N 9081 1
+  N 9273 2
+  N 9465 3
+  N 9657 0
+  N 9849 1
+  N 10041 2
+  N 10233 3
+  N 20000 0
+  N 20192 3
+  N 20384 2
+  N 20576 1
+  N 20768 0
+  N 20960 3
+  N 21152 2
+  N 21344 1
+  N 31111 0
+  N 31303 1
+  N 31495 2
+  N 31687 3
+  N 31879 0
+  N 32071 1
+  N 32263 2
+  N 32455 3
+    N 42222 0
+  N 42414 3
+  N 42606 2
+  N 42798 1
+  N 42990 0
+  N 43182 3
+  N 43374 2
+  N 43566 1
+}
+
+
+
+[ExpertDoubleBass]
+{
+
+}
+
+[HardSingle]
+{
+  N 768 0
+  N 1536 1
+  N 2304 2
+  N 3072 3
+  N 8889 0
+  N 9657 1
+  N 10425 2
+  N 11193 3
+  N 20000 0
+  N 20768 1
+  N 21536 2
+  N 22304 3
+}
+
+[MediumSingle]
+{
+  N 1536 0
+  N 3072 1
+  N 8889 0
+  N 11193 1
+  N 20000 0
+    N 22304 1
+}
+
+[EasySingle]
+{
+  N 1536 0
+  N 8889 1
+  N 20000 0
+
+}

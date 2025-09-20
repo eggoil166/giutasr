@@ -40,7 +40,8 @@ export const SongSelectScreen: React.FC = () => {
       return;
     }
 
-    const audio = new Audio(`/songs/${songItem.id}/song.ogg`);
+  // Switched to mp3 primary preview source (previously .ogg)
+  const audio = new Audio(`/songs/${songItem.id}/song.mp3`);
     audio.volume = 0; // Controlled by Web Audio API
     audio.loop = true; // Loop the preview
 

@@ -13,10 +13,18 @@ let currentIdentity: unknown | null = null;
 
 export async function connectSpacetime(savedToken?: string): Promise<SpacetimeState> {
   return new Promise((resolve) => {
-    const uri = import.meta.env.VITE_STDB_URI as string;
-    const moduleName = import.meta.env.VITE_STDB_MODULE as string;
+    const uri = (import.meta.env.VITE_STDB_URI as string | undefined)?.trim();
+    const moduleName = (import.meta.env.VITE_STDB_MODULE as string | undefined)?.trim();
+    const debug = (import.meta.env.VITE_DEBUG_SPACETIMEDB === 'true');
+
     const state: SpacetimeState = { conn: null, identity: null, connected: false, error: null };
     let resolved = false;
+
+    if (!uri || !moduleName) {
+      state.error = 'Missing VITE_STDB_URI or VITE_STDB_MODULE';
+      resolved = true; resolve(state);
+      return;
+    }
 
     const builder = DbConnection.builder()
       .withUri(uri)
@@ -29,22 +37,40 @@ export async function connectSpacetime(savedToken?: string): Promise<SpacetimeSt
         state.connected = true;
         currentConn = c as DbConnection;
         currentIdentity = id;
+        // Defer subscription until connection is fully established to avoid DOMException
+        try {
+          (c as DbConnection).subscriptionBuilder().subscribe(['SELECT * FROM user']);
+          if (debug) console.log('[SpaceTimeDB] Presence subscription registered');
+        } catch (e) {
+          if (debug) console.warn('[SpaceTimeDB] Initial subscription failed, retrying shortly', e);
+          setTimeout(() => {
+            try { (c as DbConnection).subscriptionBuilder().subscribe(['SELECT * FROM user']); if (debug) console.log('[SpaceTimeDB] Presence subscription retry OK'); } catch {/* ignore */}
+          }, 300);
+        }
         if (!resolved) { resolved = true; resolve(state); }
       })
       .onConnectError((_ctx: ErrorContext, err: Error) => {
         state.error = err instanceof Error ? err.message : 'Connect error';
         if (!resolved) { resolved = true; resolve(state); }
       })
-      .onDisconnect(() => { state.connected = false; });
+      .onDisconnect(() => { state.connected = false; if (debug) console.log('[SpaceTimeDB] Disconnected'); });
 
-    const conn = builder.build();
-    currentConn = conn;
-    state.conn = conn;
+    try {
+      const conn = builder.build();
+      currentConn = conn;
+      state.conn = conn;
+    } catch (e) {
+      state.error = e instanceof Error ? e.message : 'Build connection failed';
+      if (!resolved) { resolved = true; resolve(state); }
+      return;
+    }
 
-    // Always subscribe to user presence
-    conn.subscriptionBuilder().subscribe(['SELECT * FROM user']);
-
-    setTimeout(() => { if (!resolved && !state.connected) { state.error = 'Timeout connecting to SpaceTimeDB'; resolved = true; resolve(state); } }, 6000);
+    setTimeout(() => {
+      if (!resolved && !state.connected) {
+        state.error = 'Timeout connecting to SpaceTimeDB';
+        resolved = true; resolve(state);
+      }
+    }, 6000);
   });
 }
 

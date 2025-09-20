@@ -95,6 +95,10 @@ export const LobbyApi = {
   startMatch(conn: DbConnection, code: string) { (conn as any).reducers.startMatch?.(code); },
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   setScore(conn: DbConnection, code: string, score: number) { (conn as any).reducers.setScore?.(code, score); },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  updateGameState(conn: DbConnection, code: string, bearProgress: number, manProgress: number, gameOver: boolean, gameResult?: string) { 
+    (conn as any).reducers.updateGameState?.(code, bearProgress, manProgress, gameOver, gameResult); 
+  },
 };
 
 export function subscribeLobby(code: string, onChange: (row: Lobby | null) => void): () => void {

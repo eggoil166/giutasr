@@ -42,6 +42,11 @@ export interface Gameplay {
   accuracyP2: number;
   gameOver: boolean;
   outcome?: 'bear_escaped' | 'man_caught' | null;
+  // Synchronized bear vs man progress
+  bearProgress: number;
+  manProgress: number;
+  synchronizedGameOver: boolean;
+  synchronizedGameResult?: 'bear_escaped' | 'man_caught' | null;
 }
 
 export interface GameState {
@@ -103,6 +108,10 @@ export const useGameStore = create<GameState>((set, get) => ({
     accuracyP2: 100,
     gameOver: false,
     outcome: null,
+    bearProgress: 10.0,
+    manProgress: 0.0,
+    synchronizedGameOver: false,
+    synchronizedGameResult: null,
   },
 
   setScreen: (screen) => set({ currentScreen: screen }),
@@ -182,7 +191,15 @@ export const useGameStore = create<GameState>((set, get) => ({
             p1: { ...state.players.p1, characterId: state.lobby.side === 'blue' ? (row.red_char ?? state.players.p1.characterId) : state.players.p1.characterId, ready: state.players.p1.ready },
             p2: { ...state.players.p2, characterId: state.lobby.side !== 'blue' ? (row.blue_char ?? state.players.p2.characterId) : state.players.p2.characterId, ready: state.players.p2.ready },
           },
-          gameplay: { ...state.gameplay, scoreP1: row.red_score ?? state.gameplay.scoreP1, scoreP2: row.blue_score ?? state.gameplay.scoreP2 },
+          gameplay: { 
+            ...state.gameplay, 
+            scoreP1: row.red_score ?? state.gameplay.scoreP1, 
+            scoreP2: row.blue_score ?? state.gameplay.scoreP2,
+            bearProgress: row.bear_progress ?? state.gameplay.bearProgress,
+            manProgress: row.man_progress ?? state.gameplay.manProgress,
+            synchronizedGameOver: row.game_over ?? state.gameplay.synchronizedGameOver,
+            synchronizedGameResult: row.game_result as 'bear_escaped' | 'man_caught' | null ?? state.gameplay.synchronizedGameResult,
+          },
         }));
       }
     });
@@ -208,7 +225,15 @@ export const useGameStore = create<GameState>((set, get) => ({
             p1: { ...state.players.p1, characterId: state.lobby.side === 'blue' ? (row.red_char ?? state.players.p1.characterId) : state.players.p1.characterId, ready: state.players.p1.ready },
             p2: { ...state.players.p2, characterId: state.lobby.side !== 'blue' ? (row.blue_char ?? state.players.p2.characterId) : state.players.p2.characterId, ready: state.players.p2.ready },
           },
-          gameplay: { ...state.gameplay, scoreP1: row.red_score ?? state.gameplay.scoreP1, scoreP2: row.blue_score ?? state.gameplay.scoreP2 },
+          gameplay: { 
+            ...state.gameplay, 
+            scoreP1: row.red_score ?? state.gameplay.scoreP1, 
+            scoreP2: row.blue_score ?? state.gameplay.scoreP2,
+            bearProgress: row.bear_progress ?? state.gameplay.bearProgress,
+            manProgress: row.man_progress ?? state.gameplay.manProgress,
+            synchronizedGameOver: row.game_over ?? state.gameplay.synchronizedGameOver,
+            synchronizedGameResult: row.game_result as 'bear_escaped' | 'man_caught' | null ?? state.gameplay.synchronizedGameResult,
+          },
         }));
       }
     });
@@ -260,6 +285,21 @@ export const useGameStore = create<GameState>((set, get) => ({
     song: null,
     players: { p1: { characterId: null, ready: false }, p2: { characterId: null, ready: false } },
     lobby: { mode: 'solo', code: null, connectedP2: false, p1Ready: false, p2Ready: false, redPresent: false, bluePresent: false, side: undefined },
-    gameplay: { started: false, paused: false, scoreP1: 0, scoreP2: 0, comboP1: 0, comboP2: 0, accuracyP1: 100, accuracyP2: 100, gameOver: false, outcome: null },
+    gameplay: { 
+      started: false, 
+      paused: false, 
+      scoreP1: 0, 
+      scoreP2: 0, 
+      comboP1: 0, 
+      comboP2: 0, 
+      accuracyP1: 100, 
+      accuracyP2: 100, 
+      gameOver: false, 
+      outcome: null,
+      bearProgress: 10.0,
+      manProgress: 0.0,
+      synchronizedGameOver: false,
+      synchronizedGameResult: null,
+    },
   }),
 }));

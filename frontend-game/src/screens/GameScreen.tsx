@@ -3,6 +3,7 @@ import { useGameStore } from '../store/gameStore';
 import { GameEngine, Note, Judgment } from '../game/gameEngine';
 import { GameEngine as MultiplayerGameEngine } from '../game/gameEngineMultiplayer';
 import { InputHandler, InputEvent } from '../game/inputHandler';
+import { getConn, LobbyApi } from '../lib/spacetime';
 
 declare global {
   interface Window {
@@ -21,9 +22,9 @@ export const GameScreen: React.FC = () => {
     players, 
     lobby, 
     gameplay, 
-  updateGameplay, 
-  settings,
-  setScreen
+    updateGameplay, 
+    settings,
+    setScreen
   } = useGameStore();
   
   const [isPaused, setIsPaused] = useState(false);
@@ -96,6 +97,21 @@ export const GameScreen: React.FC = () => {
       gameEngineRef.current.handleRelease(inputEvent.lane);
     }
   }, [isPaused]);
+
+  // Function to sync game state to server
+  const syncGameState = useCallback((bearProgress: number, manProgress: number, gameOver: boolean, gameResult?: string) => {
+    const isMultiplayer = lobby.mode === 'host' || lobby.mode === 'join' || lobby.connectedP2;
+    if (isMultiplayer && lobby.code) {
+      const conn = getConn();
+      if (conn) {
+        try {
+          LobbyApi.updateGameState(conn, lobby.code, bearProgress, manProgress, gameOver, gameResult);
+        } catch (e) {
+          console.warn('Failed to sync game state:', e);
+        }
+      }
+    }
+  }, [lobby.mode, lobby.code, lobby.connectedP2]);
   
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -131,16 +147,28 @@ export const GameScreen: React.FC = () => {
       const engine = gameEngineRef.current;
       if (!engine) return;
       const stats = engine.getStats();
-      setBearProgress(stats.bearProgress);
-      setManProgress(stats.manProgress);
+      
+      // Use synchronized values in multiplayer, local values in single player
+      const isMultiplayer = lobby.mode === 'host' || lobby.mode === 'join' || lobby.connectedP2;
+      const currentBearProgress = isMultiplayer ? gameplay.bearProgress : stats.bearProgress;
+      const currentManProgress = isMultiplayer ? gameplay.manProgress : stats.manProgress;
+      const currentGameOver = isMultiplayer ? gameplay.synchronizedGameOver : stats.gameOver;
+      const currentGameResult = isMultiplayer ? gameplay.synchronizedGameResult : stats.gameResult;
+      
+      setBearProgress(currentBearProgress);
+      setManProgress(currentManProgress);
       setBearBoost(stats.spacebarPressed);
-      if (stats.gameOver && (stats.gameResult === 'bear_escaped' || stats.gameResult === 'man_caught')) {
-        setGameResult(stats.gameResult);
+      
+      // Sync local game state to server in multiplayer
+      if (isMultiplayer && lobby.code) {
+        syncGameState(stats.bearProgress, stats.manProgress, stats.gameOver, stats.gameResult || undefined);
+      }
+      
+      if (currentGameOver && (currentGameResult === 'bear_escaped' || currentGameResult === 'man_caught')) {
+        setGameResult(currentGameResult);
         if (!endHandledRef.current) {
           endHandledRef.current = true;
           
-          // Determine which player is the bear and which is the man
-          const isMultiplayer = lobby.mode === 'host' || lobby.mode === 'join' || lobby.connectedP2;
           let currentPlayerWon = false;
           
           if (isMultiplayer) {
@@ -148,17 +176,17 @@ export const GameScreen: React.FC = () => {
             const localPlayer = lobby.side === 'blue' ? 2 : 1;
             const localPlayerCharacter = localPlayer === 1 ? players.p1.characterId : players.p2.characterId;
             
-            if (stats.gameResult === 'bear_escaped') {
+            if (currentGameResult === 'bear_escaped') {
               // Bear escaped - bear player wins
               currentPlayerWon = localPlayerCharacter === 'bear';
-            } else if (stats.gameResult === 'man_caught') {
+            } else if (currentGameResult === 'man_caught') {
               // Man caught the bear - man player wins
               currentPlayerWon = localPlayerCharacter === 'man';
             }
             
             setPlayerWon(currentPlayerWon);
             console.log('Multiplayer game result:', {
-              gameResult: stats.gameResult,
+              gameResult: currentGameResult,
               localPlayer,
               localPlayerCharacter,
               playerWon: currentPlayerWon
@@ -179,7 +207,7 @@ export const GameScreen: React.FC = () => {
           } else {
             // Single player mode - go to results as normal
             engine.stop();
-            updateGameplay({ gameOver: true, outcome: stats.gameResult });
+            updateGameplay({ gameOver: true, outcome: currentGameResult });
             setScreen('RESULTS');
           }
         }
@@ -211,13 +239,20 @@ export const GameScreen: React.FC = () => {
     players.p1.characterId,
     players.p2.characterId,
     lobby.connectedP2,
+    lobby.mode,
+    lobby.code,
     song?.id,
-  settings.volume,
+    settings.volume,
     handleInput,
     handleNoteResult,
     togglePause,
     updateGameplay,
     setScreen,
+    syncGameState,
+    gameplay.bearProgress,
+    gameplay.manProgress,
+    gameplay.synchronizedGameOver,
+    gameplay.synchronizedGameResult,
   ]);
 
   // React to volume changes in settings
@@ -269,8 +304,20 @@ export const GameScreen: React.FC = () => {
     const score = player === 1 ? gameplay.scoreP1 : gameplay.scoreP2;
     const combo = player === 1 ? gameplay.comboP1 : gameplay.comboP2;
     const accuracy = player === 1 ? gameplay.accuracyP1 : gameplay.accuracyP2;
+    const characterId = player === 1 ? players.p1.characterId : players.p2.characterId;
     
     const colorClass = player === 1 ? 'lane-green' : 'lane-blue';
+    
+    // Get character icon based on assigned character
+    const getCharacterIcon = () => {
+      if (characterId === 'bear') {
+        return '🐻';
+      } else if (characterId === 'man') {
+        return '🧍';
+      } else {
+        return '🎮'; // Default controller icon if no character assigned
+      }
+    };
     
     return (
       <div className="pixel-panel p-6 max-w-xs">
@@ -280,7 +327,7 @@ export const GameScreen: React.FC = () => {
         
         {/* Player Indicator */}
         <div className={`w-24 h-32 mx-auto mb-4 ${colorClass} flex items-center justify-center`}>
-          <div className="text-6xl">🎮</div>
+          <div className="text-6xl">{getCharacterIcon()}</div>
         </div>
         
         {/* Stats */}

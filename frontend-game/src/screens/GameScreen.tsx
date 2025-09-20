@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { GameEngine, Note, Judgment } from '../game/gameEngine';
 import { InputHandler, InputEvent } from '../game/inputHandler';
-import { NeonButton } from '../components/ui/NeonButton';
 
 declare global {
   interface Window {
@@ -32,9 +31,13 @@ export const GameScreen: React.FC = () => {
   const scoreP2Ref = useRef(gameplay.scoreP2);
   const comboP1Ref = useRef(gameplay.comboP1);
   const comboP2Ref = useRef(gameplay.comboP2);
-  const [songProgress, setSongProgress] = useState(0);
-  const [songDuration, setSongDuration] = useState(0);
-  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  // Track chase stats (bear vs man) pulled from engine
+  const [bearProgress, setBearProgress] = useState(0);
+  const [manProgress, setManProgress] = useState(0);
+  const [bearBoost, setBearBoost] = useState(false);
+  const [gameResult, setGameResult] = useState<'bear_escaped' | 'man_caught' | null>(null);
+  const statsIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const endHandledRef = useRef(false);
 
   useEffect(() => { scoreP1Ref.current = gameplay.scoreP1; }, [gameplay.scoreP1]);
   useEffect(() => { scoreP2Ref.current = gameplay.scoreP2; }, [gameplay.scoreP2]);
@@ -74,17 +77,21 @@ export const GameScreen: React.FC = () => {
   const handleInput = useCallback((inputEvent: InputEvent) => {
     if (isPaused || !gameEngineRef.current) return;
 
-    const result = gameEngineRef.current.handleInput(inputEvent.lane, inputEvent.type, inputEvent.player);
-
-    if (result.judgment) {
-      console.log('NoteHit', {
-        player: inputEvent.player,
-        lane: inputEvent.lane,
-        type: inputEvent.type,
-        noteType: result.note?.type || 'none',
-        judgment: result.judgment.type,
-        score: result.judgment.score,
-      });
+    if (inputEvent.type === 'hit') {
+      const result = gameEngineRef.current.handleInput(inputEvent.lane, inputEvent.type, inputEvent.player);
+      if (result.judgment) {
+        console.log('NoteHit', {
+          player: inputEvent.player,
+          lane: inputEvent.lane,
+          type: inputEvent.type,
+          noteType: result.note?.type || 'none',
+          judgment: result.judgment.type,
+          score: result.judgment.score,
+          hold: result.note?.holdDuration || 0
+        });
+      }
+    } else if (inputEvent.type === 'release') {
+      gameEngineRef.current.handleRelease(inputEvent.lane);
     }
   }, [isPaused]);
   
@@ -114,20 +121,24 @@ export const GameScreen: React.FC = () => {
   // Setup input handling
   const cleanup = inputHandlerRef.current.onInput(handleInput);
     
-    // Setup progress tracking
-    progressIntervalRef.current = setInterval(() => {
-      if (gameEngineRef.current) {
-        const currentTime = gameEngineRef.current.getCurrentTime();
-        const stats = gameEngineRef.current.getStats();
-        const totalNotes = stats.totalNotes || 1;
-        const completedNotes = stats.perfectHits + stats.greatHits + stats.goodHits + stats.missedHits;
-        const progress = Math.min(100, (completedNotes / totalNotes) * 100);
-        setSongProgress(progress);
-        
-        // Estimate duration based on note completion
-        if (completedNotes > 0 && progress > 0) {
-          const estimatedDuration = (currentTime / progress) * 100;
-          setSongDuration(estimatedDuration);
+    // Setup stats tracking (bear vs man chase)
+    statsIntervalRef.current = setInterval(() => {
+      const engine = gameEngineRef.current;
+      if (!engine) return;
+      const stats = engine.getStats();
+      setBearProgress(stats.bearProgress);
+      setManProgress(stats.manProgress);
+      setBearBoost(stats.spacebarPressed);
+      if (stats.gameOver && (stats.gameResult === 'bear_escaped' || stats.gameResult === 'man_caught')) {
+        setGameResult(stats.gameResult);
+        // If man caught the bear, immediately end gameplay and go to results
+        if (stats.gameResult === 'man_caught' && !endHandledRef.current) {
+          endHandledRef.current = true;
+          // Stop engine & audio
+          engine.stop();
+          updateGameplay({ gameOver: true });
+          // Navigate to results screen
+          setScreen('RESULTS');
         }
       }
     }, 100);
@@ -147,9 +158,8 @@ export const GameScreen: React.FC = () => {
     return () => {
   // Stop engine/audio on unmount
   gameEngineRef.current?.stop?.();
-      if (progressIntervalRef.current) {
-        clearInterval(progressIntervalRef.current);
-      }
+  if (statsIntervalRef.current) clearInterval(statsIntervalRef.current);
+  endHandledRef.current = false;
       cleanup();
       document.removeEventListener('keydown', handlePause);
       inputHandlerRef.current?.destroy();
@@ -163,6 +173,8 @@ export const GameScreen: React.FC = () => {
     handleInput,
     handleNoteResult,
     togglePause,
+    updateGameplay,
+    setScreen,
   ]);
 
   // React to volume changes in settings
@@ -249,18 +261,41 @@ export const GameScreen: React.FC = () => {
       {/* Retro grid overlay */}
       <div className="absolute inset-0 pixel-bg opacity-10"></div>
       
-      {/* Progress Bar - Centered at bottom */}
-      <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-20">
-        <div className="pixel-panel bg-pixel-darker p-2" style={{ width: '400px' }}>
-          <div className="pixel-health-bar mb-1" style={{ height: '16px' }}>
-            <div 
-              className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-300"
-              style={{ width: `${songProgress}%` }}
-            ></div>
+      {/* Bear vs Man Chase Bar - replaces old progress bar */}
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-20 w-full px-4 max-w-2xl">
+        <div className="pixel-panel bg-pixel-darker p-3">
+          <div className="relative h-6 bg-[#222] overflow-hidden border border-pixel-purple">
+            <div className="absolute inset-0 flex">
+              <div
+                className="h-full bg-green-600 transition-all duration-150"
+                style={{ width: `${Math.min(100, bearProgress)}%` }}
+              ></div>
+              <div
+                className="h-full bg-red-600 transition-all duration-150 -ml-px"
+                style={{ width: `${Math.min(100, manProgress)}%` }}
+              ></div>
+            </div>
+            {/* Bear icon */}
+            <div
+              className="absolute top-1/2 -translate-y-1/2 text-xs"
+              style={{ left: `calc(${Math.min(100, bearProgress)}% - 12px)` }}
+            >🐻</div>
+            {/* Man icon */}
+            <div
+              className="absolute top-1/2 -translate-y-1/2 text-xs"
+              style={{ left: `calc(${Math.min(100, manProgress)}% - 8px)` }}
+            >🧍</div>
           </div>
-          <div className="text-center text-xs pixel-glow-purple">
-            {songProgress.toFixed(0)}% COMPLETE
+          <div className="flex justify-between text-[10px] mt-1 font-mono">
+            <span className="pixel-glow-green">BEAR {bearProgress.toFixed(1)}%</span>
+            {bearBoost && <span className="pixel-glow-yellow animate-pulse">BOOST!</span>}
+            <span className="pixel-glow-red">MAN {manProgress.toFixed(1)}%</span>
           </div>
+          {gameResult && (
+            <div className="text-center mt-2 text-xs pixel-glow-pink">
+              {gameResult === 'bear_escaped' ? 'BEAR ESCAPED!' : 'MAN CAUGHT THE BEAR!'}
+            </div>
+          )}
         </div>
       </div>
       
@@ -303,8 +338,8 @@ export const GameScreen: React.FC = () => {
             ref={canvasRef}
             width={480}
             height={500}
-            className="pixel-panel bg-pixel-darker border-4 border-pixel-pink"
-            style={{ imageRendering: 'pixelated' }}
+            className="pixel-panel border-4 border-pixel-pink"
+            style={{ imageRendering: 'pixelated', backgroundColor: 'transparent' }}
           />
           
           {/* Lane labels below canvas */}
@@ -331,7 +366,7 @@ export const GameScreen: React.FC = () => {
               <button className="pixel-button w-full" onClick={togglePause}>
                 RESUME
               </button>
-              <button className="pixel-button w-full" onClick={() => setScreen('HOME')}>
+              <button className="pixel-button w-full" onClick={() => setScreen('TITLE')}>
                 QUIT TO HOME
               </button>
             </div>
@@ -352,7 +387,7 @@ export const GameScreen: React.FC = () => {
               <button className="pixel-button w-full" onClick={restartSong}>
                 PLAY AGAIN
               </button>
-              <button className="pixel-button w-full" onClick={() => setScreen('HOME')}>
+              <button className="pixel-button w-full" onClick={() => setScreen('TITLE')}>
                 QUIT TO MENU
               </button>
             </div>

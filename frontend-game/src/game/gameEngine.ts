@@ -1,12 +1,17 @@
+import * as THREE from 'three';
+
 export interface Note {
   id: string;
-  lane: 0 | 1 | 2 | 3; // 4 lanes: Green, Red, Yellow, Blue
+  lane: 0 | 1 | 2 | 3;
   type: 'note';
   time: number;
   y: number;
   hit: boolean;
-  glowIntensity: number; // For glow effect when hit
-  glowTime: number; // How long the glow lasts
+  glowIntensity: number;
+  glowTime: number;
+  holdDuration?: number;
+  holdHeadHitTime?: number;
+  releasedEarly?: boolean;
 }
 
 export interface Judgment {
@@ -26,36 +31,44 @@ export class GameEngine {
   private rafId: number | null = null;
   private running = false;
   
-  // Game constants
-  private readonly NOTE_SPEED = 150; // pixels per second
+  private threeEnabled = true;
+  private renderer: THREE.WebGLRenderer | null = null;
+  private threeCanvas: HTMLCanvasElement | null = null;
+  private scene: THREE.Scene | null = null;
+  private camera: THREE.PerspectiveCamera | null = null;
+  private playfield: THREE.Group | null = null;
+  private ringMeshes: THREE.Mesh[] = [];
+  private noteGeometry: THREE.BufferGeometry | null = null;
+  private noteMaterials: THREE.MeshStandardMaterial[] = [];
+  private noteMeshes = new Map<string, THREE.Mesh>();
+  private readonly LANE_POSITIONS_3D = [-3, -1, 1, 3];
+  private readonly HIT_PLANE_Y = -5.0;
+  private readonly Z_PER_MS = 0.02;
+  
+  private readonly NOTE_SPEED = 150;
   private readonly HIT_LINE_Y = 400;
-  private readonly LANE_POSITIONS = [120, 200, 280, 360]; // 4 lanes
+  private readonly LANE_POSITIONS = [120, 200, 280, 360];
   private readonly NOTE_SIZE = 25;
-  
-  // Guitar Hero style hit targets
+
   private readonly HIT_TARGET_SIZE = 30;
-  private hitTargetGlow: number[] = [0, 0, 0, 0]; // Glow intensity for each lane
-  private hitTargetGlowTime: number[] = [0, 0, 0, 0]; // Glow duration for each lane
-  
-  // Chase mechanics - Bear vs Man
-  private bearProgress = 10.0; // Bear starts at 5% progress
-  private manProgress = 0.0; // Man starts at 0% progress
-  private readonly MAN_CHASE_SPEED = 0.2; // Man's constant chase speed (% per second)
-  private readonly BEAR_HIT_BOOST = 2.0; // How much bear advances per hit (%)
-  private readonly BEAR_MISS_PENALTY = 1.5; // How much bear slows down per miss (%)
+  private hitTargetGlow: number[] = [0, 0, 0, 0];
+  private hitTargetGlowTime: number[] = [0, 0, 0, 0];
+
+  private bearProgress = 10.0;
+  private manProgress = 0.0;
+  private readonly MAN_CHASE_SPEED = 0.2;
+  private readonly BEAR_HIT_BOOST = 2.0;
+  private readonly BEAR_MISS_PENALTY = 0.5;
   private gameOver = false;
   private gameResult: 'bear_escaped' | 'man_caught' | null = null;
-  
-  // Spacebar boost mechanics
+
   private spacebarPressed = false;
   private spacebarBoostMultiplier = 1.0;
-  
-  // Judgment timing windows (ms) - much tighter for precise timing
-  private readonly PERFECT_WINDOW = 15;  // Very tight for perfect hits
-  private readonly GREAT_WINDOW = 30;   // Tight for great hits
-  private readonly GOOD_WINDOW = 50;    // Reasonable for good hits
-  
-  // Accuracy tracking
+
+  private readonly PERFECT_WINDOW = 15;
+  private readonly GREAT_WINDOW = 30;
+  private readonly GOOD_WINDOW = 50;
+
   private totalNotes = 0;
   private perfectHits = 0;
   private greatHits = 0;
@@ -68,27 +81,28 @@ export class GameEngine {
     this.ctx = canvas.getContext('2d')!;
     this.audioContext = audioContext;
     this.gainNode = gainNode;
-    // Removed procedural chart; notes will be loaded from .chart files
-    
-    // Set up spacebar detection
     this.setupSpacebarDetection();
+
+    if (this.threeEnabled) {
+      this.initThree();
+    }
   }
   
   private setupSpacebarDetection() {
     document.addEventListener('keydown', (event) => {
       if (event.code === 'Space' && !this.spacebarPressed) {
-        event.preventDefault(); // Prevent page scroll
+        event.preventDefault();
         this.spacebarPressed = true;
-        this.spacebarBoostMultiplier = 2.0; // Double the boost
+        this.spacebarBoostMultiplier = 2.0;
         console.log('Spacebar pressed - Bear boost activated!');
       }
     });
     
     document.addEventListener('keyup', (event) => {
       if (event.code === 'Space' && this.spacebarPressed) {
-        event.preventDefault(); // Prevent page scroll
+        event.preventDefault();
         this.spacebarPressed = false;
-        this.spacebarBoostMultiplier = 1.0; // Normal boost
+        this.spacebarBoostMultiplier = 1.0;
         console.log('Spacebar released - Bear boost deactivated!');
       }
     });
@@ -135,9 +149,13 @@ export class GameEngine {
         glowIntensity: 0,
         glowTime: 0
       }));
-
       this.totalNotes = gameNotes.length;
       this.notes.sort((a, b) => a.time - b.time);
+      
+      // Create/update 3D meshes for notes
+      if (this.threeEnabled) {
+        this.syncThreeNoteMeshes();
+      }
       
       console.log('ChartLoaded', { 
         songId, 
@@ -152,23 +170,23 @@ export class GameEngine {
       this.totalNotes = 0;
     }
   }
-  
+
   start(songId?: string) {
-  // Ensure only one loop is running
-  if (this.running) this.stop();
-  this.running = true;
-  
-  // Reset chase mechanics
-  this.bearProgress = 10.0;
-  this.manProgress = 0.0;
-  this.gameOver = false;
-  this.gameResult = null;
-  
-  // Reset spacebar state
-  this.spacebarPressed = false;
-  this.spacebarBoostMultiplier = 1.0;
-  
-  if (songId) {
+    // Ensure only one loop is running
+    if (this.running) this.stop();
+    this.running = true;
+    
+    // Reset chase mechanics
+    this.bearProgress = 10.0;
+    this.manProgress = 0.0;
+    this.gameOver = false;
+    this.gameResult = null;
+    
+    // Reset spacebar state
+    this.spacebarPressed = false;
+    this.spacebarBoostMultiplier = 1.0;
+    
+    if (songId) {
       // kick off chart load and audio
       this.generateChartFromFile(songId).catch(err => console.error('ChartLoadError', err));
       this.playMusic(songId);
@@ -176,7 +194,7 @@ export class GameEngine {
     this.startTime = performance.now();
     
     // Start game loop
-  this.rafId = requestAnimationFrame(this.gameLoop);
+    this.rafId = requestAnimationFrame(this.gameLoop);
   }
   
   private playMusic(songId: string) {
@@ -252,6 +270,11 @@ export class GameEngine {
       }
     });
     
+    // Update 3D note mesh positions and visibility
+    if (this.threeEnabled && this.scene) {
+      this.updateThreeNotes();
+    }
+    
      // Update hit target glow effects
      for (let i = 0; i < 4; i++) {
        if (this.hitTargetGlowTime[i] > 0) {
@@ -279,33 +302,46 @@ export class GameEngine {
    }
   
   private render() {
-    // Clear canvas with dark background
-    this.ctx.fillStyle = '#0a0a0a';
-    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    // Render 3D scene first (background)
+    if (this.threeEnabled && this.renderer && this.scene && this.camera) {
+      this.renderer.render(this.scene, this.camera);
+    }
 
-    // Draw all 4 lanes
-    this.LANE_POSITIONS.forEach(x => this.drawLane(x));
+    // Clear 2D overlay canvas with transparent background to stack over 3D
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+    // If 3D enabled, skip 2D lane guides and hit line
+    if (!this.threeEnabled) {
+      // Draw all 4 lanes
+      this.LANE_POSITIONS.forEach(x => this.drawLane(x));
+      
+      // Draw hit line (horizontal)
+      this.ctx.strokeStyle = '#ff00ff';
+      this.ctx.lineWidth = 4;
+      this.ctx.shadowColor = '#ff00ff';
+      this.ctx.shadowBlur = 10;
+      this.ctx.beginPath();
+      this.ctx.moveTo(80, this.HIT_LINE_Y);
+      this.ctx.lineTo(400, this.HIT_LINE_Y);
+      this.ctx.stroke();
+      this.ctx.shadowBlur = 0;
+    }
     
-    // Draw hit line (horizontal)
-    this.ctx.strokeStyle = '#ff00ff';
-    this.ctx.lineWidth = 4;
-    this.ctx.shadowColor = '#ff00ff';
-    this.ctx.shadowBlur = 10;
-    this.ctx.beginPath();
-    this.ctx.moveTo(80, this.HIT_LINE_Y);
-    this.ctx.lineTo(400, this.HIT_LINE_Y);
-    this.ctx.stroke();
-    this.ctx.shadowBlur = 0;
+    // If 3D enabled, skip drawing 2D notes to avoid duplication
+    if (!this.threeEnabled) {
+      const now = this.currentTime;
+      this.notes.forEach(note => {
+        const sustainActive = !!(note.holdDuration && note.holdHeadHitTime !== undefined && !note.releasedEarly && now < (note.holdHeadHitTime + note.holdDuration));
+        if ((!note.hit || sustainActive) && note.y > -this.NOTE_SIZE - 400 && note.y < this.canvas.height + this.NOTE_SIZE) {
+          this.drawNote(note, sustainActive);
+        }
+      });
+    }
     
-    // Draw notes (only unhit notes)
-    this.notes.forEach(note => {
-      if (!note.hit && note.y > -this.NOTE_SIZE && note.y < this.canvas.height + this.NOTE_SIZE) {
-        this.drawNote(note);
-      }
-    });
-    
-    // Draw Guitar Hero style hit targets
-    this.drawHitTargets();
+    // 3D mode uses glowing ring meshes; skip 2D hit targets
+    if (!this.threeEnabled) {
+      this.drawHitTargets();
+    }
     
     // Draw lane indicators with retro colors
     const laneColors = ['#00ff00', '#ff0000', '#ffff00', '#0066ff'];
@@ -327,9 +363,7 @@ export class GameEngine {
      this.ctx.font = '10px "Press Start 2P"';
      this.ctx.fillText(`Accuracy: ${this.calculateAccuracy().toFixed(1)}%`, this.canvas.width / 2, 20);
      this.ctx.fillText(`P:${this.perfectHits} G:${this.greatHits} OK:${this.goodHits} X:${this.missedHits}`, this.canvas.width / 2, 35);
-     
-     // Draw chase progress bar
-     this.drawChaseProgress();
+  // External UI now renders chase progress bar; removed internal draw to avoid duplication
    }
   
   private drawLane(x: number) {
@@ -343,8 +377,155 @@ export class GameEngine {
     this.ctx.stroke();
     this.ctx.setLineDash([]);
   }
+
+  // --- Three.js helpers ---
+  private initThree() {
+    try {
+      const parent = this.canvas.parentElement as HTMLElement | null;
+      if (!parent) return;
+      parent.style.position = parent.style.position || 'relative';
+      
+      this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      this.renderer.setPixelRatio(window.devicePixelRatio || 1);
+      this.renderer.setSize(this.canvas.width, this.canvas.height);
+      this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+      this.renderer.setClearColor(0x000000, 0);
+      const glCanvas = this.renderer.domElement;
+      this.threeCanvas = glCanvas;
+      glCanvas.style.position = 'absolute';
+      glCanvas.style.left = '0';
+      glCanvas.style.top = '0';
+      glCanvas.style.zIndex = '0';
+      // Ensure 2D canvas is above
+      this.canvas.style.position = 'relative';
+      this.canvas.style.zIndex = '1';
+      // Insert behind 2D canvas
+      parent.insertBefore(glCanvas, this.canvas);
+      
+      // Scene and camera
+      this.scene = new THREE.Scene();
+      this.scene.background = null; // transparent to show page bg
+      this.camera = new THREE.PerspectiveCamera(42, this.canvas.width / this.canvas.height, 0.1, 1000);
+      // Same angle, closer for a tighter view
+      this.camera.position.set(0, 4.5, -10);
+      this.camera.lookAt(new THREE.Vector3(0, 0, 0));
+
+      // Playfield group angled slightly for a top view
+      this.playfield = new THREE.Group();
+      this.playfield.rotation.x = -Math.PI / 20; // more tilt (~30°) for stronger 3D
+      this.scene.add(this.playfield);
+      
+      // Lights
+      const ambient = new THREE.AmbientLight(0xffffff, 0.7);
+      const dir = new THREE.DirectionalLight(0xffffff, 0.8);
+      dir.position.set(5, 10, 5);
+      this.scene.add(ambient, dir);
+      
+      // Debug grid to make depth obvious
+      const grid = new THREE.GridHelper(80, 80, 0x444444, 0x222222);
+      grid.position.set(0, this.HIT_PLANE_Y - 0.02, 40);
+      this.playfield.add(grid);
+
+      // Track and hit rings
+      const ringGeo = new THREE.TorusGeometry(0.55, 0.06, 12, 36);
+      const laneColors = [0x00ff00, 0xff0000, 0xffff00, 0x0066ff];
+      for (let i = 0 as 0|1|2|3; i < 4; i = (i + 1) as 0|1|2|3) {
+        const x = this.getLaneX(i);
+        const mat = new THREE.MeshStandardMaterial({ color: laneColors[i], emissive: laneColors[i], emissiveIntensity: 0.2, metalness: 0.0, roughness: 0.9 });
+        const ring = new THREE.Mesh(ringGeo, mat);
+        ring.position.set(x, this.HIT_PLANE_Y, 0);
+        ring.rotation.x = Math.PI / 2;
+        this.playfield!.add(ring);
+        this.ringMeshes[i] = ring;
+      }
+      ringGeo.dispose();
+      
+      // Notes geometry (disk) and materials
+      this.noteGeometry = new THREE.CylinderGeometry(0.8, 0.8, 0.18, 28);
+      this.noteMaterials = [
+        new THREE.MeshStandardMaterial({ color: 0x00ff00, emissive: 0x003300, metalness: 0.1, roughness: 0.4 }),
+        new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0x330000, metalness: 0.1, roughness: 0.4 }),
+        new THREE.MeshStandardMaterial({ color: 0xffff00, emissive: 0x333300, metalness: 0.1, roughness: 0.4 }),
+        new THREE.MeshStandardMaterial({ color: 0x0066ff, emissive: 0x001133, metalness: 0.1, roughness: 0.4 }),
+      ];
+
+      console.log('ThreeInitOk');
+    } catch (e) {
+      console.warn('ThreeInitFailed', e);
+      this.threeEnabled = false;
+    }
+    // Decay ring emissive intensity for feedback glow
+    if (this.ringMeshes.length) {
+      for (const ring of this.ringMeshes) {
+        const mat = ring.material as THREE.MeshStandardMaterial;
+        if (mat && mat.emissiveIntensity > 0.25) {
+          mat.emissiveIntensity = Math.max(0.25, mat.emissiveIntensity - 0.05);
+        }
+      }
+    }
+  }
+
+  private timeToZ(noteTimeMs: number): number {
+    // At noteTimeMs == currentTime -> z = 0 (hit plane)
+    // Positive z means in front of the hit line; will move toward 0 over time
+    return Math.max(-5, (noteTimeMs - this.currentTime) * this.Z_PER_MS);
+  }
+
+  private getLaneX(lane: 0|1|2|3): number {
+    // Flip orientation so lane 0 (green) is leftmost and lane 3 (blue) rightmost
+    return this.LANE_POSITIONS_3D[3 - lane];
+  }
+
+  private syncThreeNoteMeshes() {
+    if (!this.scene || !this.noteGeometry || this.noteMaterials.length !== 4) return;
+    // Remove existing meshes not in current notes
+    const validIds = new Set(this.notes.map(n => n.id));
+    for (const [id, mesh] of this.noteMeshes) {
+      if (!validIds.has(id)) {
+        this.scene.remove(mesh);
+        (mesh.geometry as THREE.BufferGeometry).dispose();
+        if (Array.isArray(mesh.material)) (mesh.material as THREE.Material[]).forEach((m: THREE.Material) => m.dispose());
+        else (mesh.material as THREE.Material).dispose();
+        this.noteMeshes.delete(id);
+      }
+    }
+    // Create meshes for notes missing a mesh
+    for (const n of this.notes) {
+      if (this.noteMeshes.has(n.id)) continue;
+      const mesh = new THREE.Mesh(this.noteGeometry, this.noteMaterials[n.lane]);
+      // Make disk face the camera similar to rings
+      mesh.rotation.x = Math.PI / 2;
+      mesh.position.set(this.getLaneX(n.lane), this.HIT_PLANE_Y, this.timeToZ(n.time));
+      this.playfield!.add(mesh);
+      this.noteMeshes.set(n.id, mesh);
+    }
+    console.log('ThreeNotesCreated', { count: this.noteMeshes.size });
+  }
+
+  private updateThreeNotes() {
+    // Update mesh positions and visibility based on timing and hit state
+    for (const n of this.notes) {
+      const mesh = this.noteMeshes.get(n.id);
+      if (!mesh) continue;
+      const z = this.timeToZ(n.time);
+      mesh.position.z = z;
+      // Fade out when hit or long past
+      const sustainActive = !!(n.holdDuration && n.holdHeadHitTime !== undefined && !n.releasedEarly && (this.currentTime < (n.holdHeadHitTime + n.holdDuration)));
+      const shouldShow = !n.hit || sustainActive;
+      mesh.visible = !!(shouldShow && z > -5 && z < 400);
+      
+      // Spacebar boost glow
+      if (this.spacebarPressed) {
+        const mat = mesh.material as THREE.MeshStandardMaterial;
+        mat.emissiveIntensity = 1.2;
+      } else {
+        const mat = mesh.material as THREE.MeshStandardMaterial;
+        mat.emissiveIntensity = 0.6;
+      }
+    }
+  }
   
-  private drawNote(note: Note) {
+  private drawNote(note: Note, sustainActive: boolean) {
     const x = this.LANE_POSITIONS[note.lane];
     
     // Retro arcade note colors based on lane
@@ -378,16 +559,62 @@ export class GameEngine {
       this.ctx.globalAlpha = 1;
     }
     
-    // Main note circle
+    // Sustain tail (draw behind head)
+    if (note.holdDuration && note.holdDuration > 0) {
+      const pixelsPerMs = this.NOTE_SPEED / 1000;
+      const tailLengthPx = note.holdDuration * pixelsPerMs;
+      // Tail extends upward (earlier time) from head
+      const tailTopY = note.y - tailLengthPx;
+      // If actively held, brighten the tail
+      if (sustainActive) {
+        this.ctx.strokeStyle = colors.glow;
+        this.ctx.lineWidth = 8;
+        this.ctx.shadowColor = colors.glow;
+        this.ctx.shadowBlur = 12;
+      } else {
+        this.ctx.strokeStyle = colors.secondary + '66';
+        this.ctx.lineWidth = 6;
+      }
+      this.ctx.beginPath();
+      this.ctx.moveTo(x, tailTopY);
+      this.ctx.lineTo(x, note.y);
+      this.ctx.stroke();
+      this.ctx.lineWidth = 3;
+      this.ctx.shadowBlur = 0;
+    }
+
+    // Main note head
+    const headAlpha = sustainActive ? 1 : 1;
+    this.ctx.globalAlpha = headAlpha;
+    // Shining effect for active sustain hold
+    if (sustainActive && note.holdHeadHitTime !== undefined) {
+      const elapsed = this.currentTime - note.holdHeadHitTime;
+      const progress = Math.max(0, Math.min(1, note.holdDuration ? elapsed / note.holdDuration : 0));
+      const pulse = 0.5 + 0.5 * Math.sin(elapsed / 120); // fast pulsing
+      // Outer pulsing glow rings
+      const ringCount = 3;
+      for (let i = 0; i < ringCount; i++) {
+        const frac = i / ringCount;
+        this.ctx.globalAlpha = (0.35 - frac * 0.1) * (0.6 + pulse * 0.4);
+        this.ctx.fillStyle = colors.primary;
+        this.ctx.shadowColor = colors.glow;
+        this.ctx.shadowBlur = 15 + pulse * 10;
+        this.ctx.beginPath();
+        this.ctx.arc(x, note.y, this.NOTE_SIZE * (0.8 + frac * 0.9 + progress * 0.2), 0, Math.PI * 2);
+        this.ctx.fill();
+      }
+      this.ctx.shadowBlur = 0;
+      this.ctx.globalAlpha = 1;
+    }
+    // Core note head (always)
     this.ctx.fillStyle = colors.primary;
     this.ctx.beginPath();
     this.ctx.arc(x, note.y, this.NOTE_SIZE * 0.8, 0, Math.PI * 2);
     this.ctx.fill();
-    
-    // Bright retro border
-    this.ctx.strokeStyle = colors.secondary;
-    this.ctx.lineWidth = 3;
+    this.ctx.strokeStyle = sustainActive ? '#ffffff' : colors.secondary;
+    this.ctx.lineWidth = sustainActive ? 4 : 3;
     this.ctx.stroke();
+    this.ctx.globalAlpha = 1;
   }
   
   private drawHitTargets() {
@@ -414,7 +641,6 @@ export class GameEngine {
         // Intense glow effect
         this.ctx.shadowColor = colors.glow;
         this.ctx.shadowBlur = 15 + (glowIntensity * 25);
-        
         // Draw multiple glowing circles
         for (let i = 0; i < 3; i++) {
           const alpha = glowIntensity * (0.4 - i * 0.1);
@@ -424,140 +650,58 @@ export class GameEngine {
           this.ctx.arc(x, this.HIT_LINE_Y, this.HIT_TARGET_SIZE * (0.6 + i * 0.2), 0, Math.PI * 2);
           this.ctx.fill();
         }
-        
-        // Reset shadow and alpha
+        // Reset
         this.ctx.shadowBlur = 0;
         this.ctx.globalAlpha = 1;
-        
-        // Draw bright center
         this.ctx.fillStyle = colors.primary;
         this.ctx.beginPath();
         this.ctx.arc(x, this.HIT_LINE_Y, this.HIT_TARGET_SIZE * 0.6, 0, Math.PI * 2);
         this.ctx.fill();
       }
-     });
-   }
-   
-   private drawChaseProgress() {
-     const barWidth = 300;
-     const barHeight = 20;
-     const barX = (this.canvas.width - barWidth) / 2;
-     const barY = this.canvas.height - 60;
-     
-     // Draw background bar
-     this.ctx.fillStyle = '#333333';
-     this.ctx.fillRect(barX, barY, barWidth, barHeight);
-     
-     // Draw bear progress (green)
-     const bearWidth = (this.bearProgress / 100) * barWidth;
-     this.ctx.fillStyle = '#00ff00';
-     this.ctx.fillRect(barX, barY, bearWidth, barHeight);
-     
-     // Draw man progress (red)
-     const manWidth = (this.manProgress / 100) * barWidth;
-     this.ctx.fillStyle = '#ff0000';
-     this.ctx.fillRect(barX, barY, manWidth, barHeight);
-     
-     // Draw bear icon at bear position (circle)
-     const bearX = barX + bearWidth - 10;
-     this.ctx.fillStyle = '#8B4513'; // Brown for bear
-     this.ctx.beginPath();
-     this.ctx.arc(bearX, barY + barHeight/2, 8, 0, Math.PI * 2);
-     this.ctx.fill();
-     
-     // Draw man icon at man position (triangle)
-     const manX = barX + manWidth - 10;
-     this.ctx.fillStyle = '#4169E1'; // Blue for man
-     this.ctx.beginPath();
-     this.ctx.moveTo(manX, barY + 2);
-     this.ctx.lineTo(manX - 8, barY + barHeight - 2);
-     this.ctx.lineTo(manX + 8, barY + barHeight - 2);
-     this.ctx.closePath();
-     this.ctx.fill();
-     
-     // Draw border
-     this.ctx.strokeStyle = '#ffffff';
-     this.ctx.lineWidth = 2;
-     this.ctx.strokeRect(barX, barY, barWidth, barHeight);
-     
-     // Draw labels
-     this.ctx.fillStyle = '#ffffff';
-     this.ctx.font = '12px "Press Start 2P"';
-     this.ctx.fillText('BEAR', barX - 30, barY + barHeight/2 + 4);
-     this.ctx.fillText('MAN', barX + barWidth + 10, barY + barHeight/2 + 4);
-     
-     // Draw spacebar boost indicator
-     if (this.spacebarPressed) {
-       this.ctx.fillStyle = '#ffff00';
-       this.ctx.font = '12px "Press Start 2P"';
-       this.ctx.fillText('SPACEBAR BOOST ACTIVE!', this.canvas.width / 2 - 80, barY - 30);
-     }
-     
-     // Draw game over message
-     if (this.gameOver) {
-       this.ctx.fillStyle = this.gameResult === 'bear_escaped' ? '#00ff00' : '#ff0000';
-       this.ctx.font = '16px "Press Start 2P"';
-       const message = this.gameResult === 'bear_escaped' ? 'BEAR ESCAPED!' : 'MAN CAUGHT BEAR!';
-       this.ctx.fillText(message, this.canvas.width / 2 - 80, barY - 10);
-     }
-   }
-   
-   handleInput(lane: 0 | 1 | 2 | 3, inputType: 'hit', player: number): { judgment: Judgment | null; note: Note | null; accuracy: number } {
-    // Find the closest unhit note in the specified lane that matches the input type
-    const laneNotes = this.notes.filter(note => 
-      note.lane === lane && 
-      !note.hit && 
-      Math.abs(note.y - this.HIT_LINE_Y) < 40 // Much tighter hit window - notes must be very close
-    );
-    
-    if (laneNotes.length === 0) {
-      // No hittable note in this lane at the hit window.
-      // Check if there's a note in the other lane within the timing window (wrong movement/hand).
-      const otherLaneNotes = this.notes.filter(n =>
-        n.lane !== lane && !n.hit && Math.abs(n.y - this.HIT_LINE_Y) < 40
-      );
-
-       this.missedHits++;
-       const accuracy = this.calculateAccuracy();
-       
-       // Bear gets penalty for missing notes
-       this.bearProgress -= this.BEAR_MISS_PENALTY;
-       this.bearProgress = Math.max(0, this.bearProgress); // Don't go below 0
-
-       if (this.onNoteResult) {
-         this.onNoteResult({
-           judgment: { type: 'Miss', score: 0 },
-           note: null as unknown as Note,
-           player,
-           accuracy,
-         });
-       }
-
-       return { judgment: { type: 'Miss', score: 0 }, note: null, accuracy };
-    }
-    
-    // Get the closest note
-    const closestNote = laneNotes.reduce((closest, note) => {
-      const closestDistance = Math.abs(closest.y - this.HIT_LINE_Y);
-      const noteDistance = Math.abs(note.y - this.HIT_LINE_Y);
-      return noteDistance < closestDistance ? note : closest;
     });
-    
-    const timingError = Math.abs(closestNote.y - this.HIT_LINE_Y);
-    const deltaMs = (timingError / this.NOTE_SPEED) * 1000; // Convert to milliseconds
+  }
+
+  handleInput(lane: 0 | 1 | 2 | 3, _inputType: 'hit', player: number): { judgment: Judgment | null; note: Note | null; accuracy: number } {
+    // Time-based detection at the 3D ring plane (z=0)
+    const now = this.currentTime;
+    const laneNotes = this.notes.filter(note => note.lane === lane && !note.hit);
+    if (laneNotes.length === 0) {
+      this.missedHits++;
+      const accuracy = this.calculateAccuracy();
+      this.bearProgress -= this.BEAR_MISS_PENALTY;
+      this.bearProgress = Math.max(0, this.bearProgress);
+      if (this.onNoteResult) {
+        this.onNoteResult({ judgment: { type: 'Miss', score: 0 }, note: null as unknown as Note, player, accuracy });
+      }
+      return { judgment: { type: 'Miss', score: 0 }, note: null, accuracy };
+    }
+
+    // Find the closest by absolute time difference
+    const closestNote = laneNotes.reduce((closest, note) => {
+      const a = Math.abs((closest.time) - now);
+      const b = Math.abs((note.time) - now);
+      return b < a ? note : closest;
+    });
+    const deltaMs = Math.abs(closestNote.time - now);
 
     closestNote.hit = true;
+    if (closestNote.holdDuration) {
+      closestNote.holdHeadHitTime = this.currentTime;
+    }
     
-    // Start hit target glow effect (Guitar Hero style)
-    this.hitTargetGlow[lane] = 1.0;
-    this.hitTargetGlowTime[lane] = 300; // Glow for 300ms
+    // 3D ring glow feedback
+    const ring = this.ringMeshes[lane];
+    if (ring && ring.material instanceof THREE.MeshStandardMaterial) {
+      const m = ring.material as THREE.MeshStandardMaterial;
+      m.emissiveIntensity = 1.5;
+      // Decay back down over time via update loop below
+    }
 
     let judgment: Judgment;
     const baseScore = 100;
     
     // Bonus points for matching note type
-    const typeMatch = closestNote.type === inputType;
-    const typeBonus = typeMatch ? 1.5 : 0.8; // 50% bonus for correct type, 20% penalty for wrong type
+  const typeBonus = 1; // simplified; no separate input types currently
     
      if (deltaMs <= this.PERFECT_WINDOW) {
        judgment = { type: 'Perfect', score: Math.floor(baseScore * typeBonus) };
@@ -584,9 +728,7 @@ export class GameEngine {
     const accuracy = this.calculateAccuracy();
     console.log('AccuracyUpdated', { player, accuracy });
     
-    if (this.onNoteResult) {
-      this.onNoteResult({ judgment, note: closestNote, player, accuracy });
-    }
+    if (this.onNoteResult) this.onNoteResult({ judgment, note: closestNote, player, accuracy });
     
     return { judgment, note: closestNote, accuracy };
   }
@@ -643,6 +785,10 @@ export class GameEngine {
         console.warn('AudioStopError', e);
       }
     }
+    // Dispose 3D resources
+    if (this.threeEnabled) {
+      this.disposeThree();
+    }
   }
   
   getCurrentTime(): number {
@@ -655,5 +801,67 @@ export class GameEngine {
   
   setVolume(volume: number) {
     this.gainNode.gain.value = volume;
+  }
+
+  handleRelease(lane: 0|1|2|3) {
+    const now = this.currentTime;
+    // Find active sustain in this lane (head already hit, sustain not finished)
+    const active = this.notes.find(n => n.lane === lane && n.holdDuration && n.holdHeadHitTime !== undefined && !n.releasedEarly && now < (n.holdHeadHitTime + n.holdDuration));
+    if (active) {
+      active.releasedEarly = true;
+      // Penalize as a miss for sustain tail
+      this.missedHits++;
+    }
+  }
+
+  private disposeThree() {
+    try {
+      // Remove note meshes
+      for (const [, mesh] of this.noteMeshes) {
+        this.scene?.remove(mesh);
+      }
+      this.noteMeshes.clear();
+      
+      // Dispose scene objects (geometries/materials)
+      if (this.scene) {
+        this.scene.traverse((obj: THREE.Object3D) => {
+          if (obj instanceof THREE.Mesh) {
+            const geometry = obj.geometry as THREE.BufferGeometry | undefined;
+            const material = obj.material as THREE.Material | THREE.Material[] | undefined;
+            if (geometry) geometry.dispose();
+            if (material) {
+              if (Array.isArray(material)) (material as THREE.Material[]).forEach((m: THREE.Material) => m.dispose());
+              else material.dispose();
+            }
+          }
+        });
+      }
+
+      // Dispose shared note resources
+      this.noteMaterials.forEach(m => m.dispose());
+      this.noteMaterials = [];
+      if (this.noteGeometry) {
+        this.noteGeometry.dispose();
+        this.noteGeometry = null;
+      }
+
+      // Dispose renderer
+      if (this.renderer) {
+        this.renderer.dispose();
+      }
+
+      // Remove WebGL canvas
+      if (this.threeCanvas && this.threeCanvas.parentElement) {
+        this.threeCanvas.parentElement.removeChild(this.threeCanvas);
+      }
+
+      // Null references
+      this.renderer = null;
+      this.scene = null;
+      this.camera = null;
+      this.threeCanvas = null;
+    } catch (e) {
+      console.warn('ThreeDisposeFailed', e);
+    }
   }
 }

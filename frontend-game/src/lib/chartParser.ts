@@ -426,6 +426,7 @@ export interface GameNote {
   time: number;
   y: number;
   hit: boolean;
+  holdDuration?: number; // sustain length in ms
 }
 
 export const convertChartToGameNotes = (
@@ -440,16 +441,16 @@ export const convertChartToGameNotes = (
     const activeLanes = [0, 1, 2, 3, 4].filter(i => note.notes[i]);
     
     activeLanes.forEach(lane => {
-      // Map 5 guitar lanes to 4 game lanes
       const gameLane = Math.min(lane, 3) as 0 | 1 | 2 | 3;
-      
+      const sustainMs = note.duration[lane] || 0;
       gameNotes.push({
         id: `note-${index}-${note.point}-${lane}`,
         lane: gameLane,
         type: 'note',
         time: note.ms,
-        y: -25, // Will be updated by game engine
-        hit: false
+        y: -25,
+        hit: false,
+        holdDuration: sustainMs > 0 ? sustainMs : undefined
       });
     });
   });

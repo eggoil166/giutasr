@@ -5,7 +5,7 @@ export interface InputEvent {
   action: InputAction;
   timestamp: number;
   lane: 0 | 1 | 2 | 3;
-  type: 'hit';
+  type: 'hit' | 'release';
 }
 
 export class InputHandler {
@@ -36,7 +36,22 @@ export class InputHandler {
   };
   
   private handleKeyUp = (event: KeyboardEvent) => {
-    this.keyStates.set(event.key, false);
+    const key = event.key;
+    if (!this.keyStates.get(key)) return;
+    this.keyStates.set(key, false);
+    const laneMap: Record<string, number> = { v:0, c:1, x:2, z:3 };
+    const lower = key.toLowerCase();
+    if (laneMap[lower] !== undefined) {
+      const timestamp = performance.now();
+      const evt: InputEvent = {
+        player: 1,
+        action: `LANE_${laneMap[lower]}` as InputAction,
+        timestamp,
+        lane: laneMap[lower] as 0|1|2|3,
+        type: 'release'
+      };
+      this.callbacks.forEach(cb => cb(evt));
+    }
   };
   
   private mapKeyToInput(key: string): InputEvent | null {

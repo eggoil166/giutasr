@@ -40,9 +40,22 @@ export const SongSelectScreen: React.FC = () => {
       return;
     }
 
-    const audio = new Audio(`/songs/${songItem.id}/song.ogg`);
-    audio.volume = 0; // Controlled by Web Audio API
+  const basePath = `/songs/${songItem.id}/song`;
+ 
+  const chosenSrc = `${basePath}.ogg`;
+  const audio = new Audio(chosenSrc);
+    audio.volume = 0; 
     audio.loop = true; // Loop the preview
+    const tried: Record<string, boolean> = { ogg: true };
+    const tryAlt = () => {
+      if (!audio.src.endsWith('.mp4') && !tried.mp4) {
+        tried.mp4 = true;
+        audio.src = `${basePath}.mp4`;
+        audio.load();
+        audio.play().catch(err => console.warn('Preview mp4 failed', err));
+      }
+    };
+    audio.addEventListener('error', tryAlt, { once: true });
 
     const w = window as AppWindow;
     const audioContext = w.gameAudioContext;

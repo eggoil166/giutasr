@@ -404,7 +404,7 @@ export const SongSelectScreen: React.FC = () => {
                     key={songItem.id}
                     className={`p-4 pixel-panel transition-all cursor-pointer ${
                       selectedSongIndex === index && focusMode === 'song'
-                        ? 'highlighted scale-105'
+                        ? 'highlighted scale-103'
                         : song?.id === songItem.id
                         ? 'outlined'
                         : 'hover:border-pixel-purple'
@@ -503,6 +503,7 @@ export const SongSelectScreen: React.FC = () => {
         </div>
         
         {/* Lobby Actions */}
+        {lobby.mode !== 'solo' && (
         <div className="pixel-panel p-4 mb-8">
           <h3 className="text-sm text-pixel-white mb-3">MULTIPLAYER LOBBY</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -540,6 +541,7 @@ export const SongSelectScreen: React.FC = () => {
             </div>
           </div>
         </div>
+        )}
 
         {/* Start Button */}
         <div className="text-center mb-8">

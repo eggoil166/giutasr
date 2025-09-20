@@ -427,6 +427,7 @@ export interface GameNote {
   y: number;
   hit: boolean;
   holdDuration?: number; // sustain length in ms
+  track?: 'guitar' | 'drum'; // Track type for multiplayer
 }
 
 export const convertChartToGameNotes = (
@@ -437,20 +438,73 @@ export const convertChartToGameNotes = (
   const gameNotes: GameNote[] = [];
 
   chartNotes.forEach((note, index) => {
-    // Convert 5-lane guitar chart to 4-lane game
+    // Convert 5-lane guitar chart to 4-lane guitar game
     const activeLanes = [0, 1, 2, 3, 4].filter(i => note.notes[i]);
     
     activeLanes.forEach(lane => {
       const gameLane = Math.min(lane, 3) as 0 | 1 | 2 | 3;
       const sustainMs = note.duration[lane] || 0;
       gameNotes.push({
-        id: `note-${index}-${note.point}-${lane}`,
+        id: `guitar-${index}-${note.point}-${lane}`,
         lane: gameLane,
         type: 'note',
         time: note.ms,
         y: -25,
         hit: false,
-        holdDuration: sustainMs > 0 ? sustainMs : undefined
+        holdDuration: sustainMs > 0 ? sustainMs : undefined,
+        track: 'guitar'
+      });
+    });
+  });
+
+  // Sort by time
+  gameNotes.sort((a, b) => a.time - b.time);
+  return gameNotes;
+};
+
+// New function to convert charts to both guitar and drum notes for multiplayer
+export const convertChartToMultiplayerNotes = (
+  chart: ChartFile.Chart,
+  difficulty: keyof ChartFile.Notes = 'expert'
+): GameNote[] => {
+  const chartNotes = chart.notes[difficulty] || [];
+  const gameNotes: GameNote[] = [];
+
+  chartNotes.forEach((note, index) => {
+    // Convert 5-lane guitar chart to 4-lane guitar game
+    const activeLanes = [0, 1, 2, 3, 4].filter(i => note.notes[i]);
+    
+    activeLanes.forEach(lane => {
+      const gameLane = Math.min(lane, 3) as 0 | 1 | 2 | 3;
+      const sustainMs = note.duration[lane] || 0;
+      gameNotes.push({
+        id: `guitar-${index}-${note.point}-${lane}`,
+        lane: gameLane,
+        type: 'note',
+        time: note.ms,
+        y: -25,
+        hit: false,
+        holdDuration: sustainMs > 0 ? sustainMs : undefined,
+        track: 'guitar'
+      });
+    });
+
+    // Generate drum notes based on guitar chart patterns
+    // Use lanes 0 and 1 (green and red) to create 2-lane drum patterns
+    const drumLanes = [0, 1].filter(i => note.notes[i]);
+    
+    drumLanes.forEach(lane => {
+      const drumLane = lane === 0 ? 1 : 0; // Map lane 0->1, lane 1->0 to swap orange and purple
+      const sustainMs = note.duration[lane] || 0;
+      gameNotes.push({
+        id: `drum-${index}-${note.point}-${lane}`,
+        lane: drumLane as 0 | 1,
+        type: 'note',
+        time: note.ms + 100, // Offset drum notes slightly for variation
+        y: -25,
+        hit: false,
+        holdDuration: sustainMs > 0 ? sustainMs : undefined,
+        track: 'drum'
       });
     });
   });

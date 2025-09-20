@@ -169,16 +169,16 @@ export class GameEngine {
         return;
       }
 
-      const { parse, convertChartToGameNotes } = await import('../lib/chartParser');
+      const { parse, convertChartToMultiplayerNotes } = await import('../lib/chartParser');
       const chart = parse(text);
-      const gameNotes = convertChartToGameNotes(chart, difficulty);
+      const gameNotes = convertChartToMultiplayerNotes(chart, difficulty);
 
       this.notes = gameNotes.map(note => ({
         ...note,
         y: -this.NOTE_SIZE,
         glowIntensity: 0,
         glowTime: 0,
-        track: 'guitar' // Default to guitar track for now
+        track: note.track || 'guitar' // Use track from parser or default to guitar
       }));
       this.totalNotes = gameNotes.length;
       this.notes.sort((a, b) => a.time - b.time);
@@ -384,12 +384,7 @@ export class GameEngine {
     
     // Skip top lane labels
     
-     // Draw accuracy info
-     this.ctx.fillStyle = '#ff00ff';
-     this.ctx.font = '10px "Press Start 2P"';
-     this.ctx.fillText(`Accuracy: ${this.calculateAccuracy().toFixed(1)}%`, this.canvas.width / 2, 20);
-     this.ctx.fillText(`P:${this.perfectHits} G:${this.greatHits} OK:${this.goodHits} X:${this.missedHits}`, this.canvas.width / 2, 35);
-  // External UI now renders chase progress bar; removed internal draw to avoid duplication
+  // External UI now renders chase progress bar and accuracy info; removed internal draw to avoid duplication
    }
   
   private drawLane(x: number) {
@@ -790,9 +785,18 @@ export class GameEngine {
         }
       } else {
         const laneIdx = n.lane;
-        const baseColors = [0x00ff00, 0xff0000, 0xffff00, 0x0066ff];
-        mat.color.setHex(baseColors[laneIdx]);
-        mat.emissive.setHex([0x003300, 0x330000, 0x333300, 0x001133][laneIdx]);
+        if (n.track === 'drum') {
+          // Use drum colors (orange and purple) for drum notes
+          const drumColors = [0xff6600, 0x9900ff]; // Orange, Purple
+          const drumEmissive = [0x331100, 0x220033]; // Orange emissive, Purple emissive
+          mat.color.setHex(drumColors[laneIdx]);
+          mat.emissive.setHex(drumEmissive[laneIdx]);
+        } else {
+          // Use guitar colors for guitar notes
+          const baseColors = [0x00ff00, 0xff0000, 0xffff00, 0x0066ff];
+          mat.color.setHex(baseColors[laneIdx]);
+          mat.emissive.setHex([0x003300, 0x330000, 0x333300, 0x001133][laneIdx]);
+        }
         mat.emissiveIntensity = 0.6;
       }
       // Brief hit glow on the note itself

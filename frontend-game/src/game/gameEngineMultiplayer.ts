@@ -1022,12 +1022,15 @@ export class GameEngine {
   }
   
   private calculateAccuracy(): number {
-    // Accuracy should remain 100 until a non-perfect or miss occurs.
     const processed = this.perfectHits + this.greatHits + this.goodHits + this.missedHits;
     if (processed === 0) return 100;
-    // Heavier penalty for non-perfects and misses
-    const weightedHits = (this.perfectHits * 1.0) + (this.greatHits * 0.9) + (this.goodHits * 0.75);
-    return Math.max(0, Math.min(100, (weightedHits / processed) * 100));
+    
+    // Calculate accuracy as percentage of perfect hits
+    // Perfect = 100%, Great = 90%, Good = 75%, Miss = 0%
+    const weightedScore = (this.perfectHits * 100) + (this.greatHits * 90) + (this.goodHits * 75) + (this.missedHits * 0);
+    const maxPossibleScore = processed * 100;
+    
+    return Math.max(0, Math.min(100, (weightedScore / maxPossibleScore)));
   }
   
    getStats() {

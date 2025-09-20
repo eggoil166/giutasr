@@ -37,6 +37,7 @@ export const GameScreen: React.FC = () => {
   const [manProgress, setManProgress] = useState(0);
   const [bearBoost, setBearBoost] = useState(false);
   const [gameResult, setGameResult] = useState<'bear_escaped' | 'man_caught' | null>(null);
+  const [playerWon, setPlayerWon] = useState<boolean | null>(null);
   const statsIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const endHandledRef = useRef(false);
 
@@ -138,14 +139,41 @@ export const GameScreen: React.FC = () => {
         if (!endHandledRef.current) {
           endHandledRef.current = true;
           
-          // Check if multiplayer mode - auto-restart instead of going to results
+          // Determine which player is the bear and which is the man
           const isMultiplayer = lobby.mode === 'host' || lobby.mode === 'join' || lobby.connectedP2;
+          let currentPlayerWon = false;
+          
+          if (isMultiplayer) {
+            // In multiplayer, determine win condition based on character assignment
+            const localPlayer = lobby.side === 'blue' ? 2 : 1;
+            const localPlayerCharacter = localPlayer === 1 ? players.p1.characterId : players.p2.characterId;
+            
+            if (stats.gameResult === 'bear_escaped') {
+              // Bear escaped - bear player wins
+              currentPlayerWon = localPlayerCharacter === 'bear';
+            } else if (stats.gameResult === 'man_caught') {
+              // Man caught the bear - man player wins
+              currentPlayerWon = localPlayerCharacter === 'man';
+            }
+            
+            setPlayerWon(currentPlayerWon);
+            console.log('Multiplayer game result:', {
+              gameResult: stats.gameResult,
+              localPlayer,
+              localPlayerCharacter,
+              playerWon: currentPlayerWon
+            });
+          } else {
+            // Single player mode - always show results
+            setPlayerWon(null);
+          }
           
           if (isMultiplayer) {
             // Auto-restart the song in multiplayer mode
             console.log('Multiplayer song complete - auto-restarting...');
             setTimeout(() => {
               endHandledRef.current = false; // Reset the flag
+              setPlayerWon(null); // Reset win state
               engine.start(song?.id); // Restart the same song
             }, 1000); // Brief pause before restart
           } else {
@@ -404,8 +432,28 @@ export const GameScreen: React.FC = () => {
         </div>
       )}
       
+      {/* Multiplayer Win/Lose Overlay */}
+      {gameResult && playerWon !== null && (lobby.mode === 'host' || lobby.mode === 'join' || lobby.connectedP2) && (
+        <div className="absolute inset-0 bg-pixel-darker bg-opacity-95 flex items-center justify-center z-50">
+          <div className={`pixel-panel p-8 text-center border-4 ${playerWon ? 'border-green-500' : 'border-red-500'}`}>
+            <h2 className={`retro-title text-5xl mb-4 ${playerWon ? 'pixel-glow-green' : 'pixel-glow-red'}`}>
+              {playerWon ? 'VICTORY!' : 'DEFEAT!'}
+            </h2>
+            <p className={`text-2xl mb-6 ${playerWon ? 'pixel-glow-green' : 'pixel-glow-red'}`}>
+              {gameResult === 'bear_escaped' 
+                ? (playerWon ? 'BEAR ESCAPED! YOU WIN!' : 'BEAR ESCAPED! YOU LOSE!')
+                : (playerWon ? 'MAN CAUGHT THE BEAR! YOU WIN!' : 'MAN CAUGHT THE BEAR! YOU LOSE!')
+              }
+            </p>
+            <div className="text-sm pixel-glow-purple mb-4">
+              RESTARTING IN 1 SECOND...
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Game Over Menu */}
-      {gameplay.gameOver && (
+      {gameplay.gameOver && !(lobby.mode === 'host' || lobby.mode === 'join' || lobby.connectedP2) && (
         <div className="absolute inset-0 bg-pixel-darker bg-opacity-90 flex items-center justify-center z-50">
           <div className="pixel-panel p-8 text-center border-4 border-red-500">
             <h2 className="retro-title text-4xl mb-4 pixel-glow-pink">SONG COMPLETE</h2>

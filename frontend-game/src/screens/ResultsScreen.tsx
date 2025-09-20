@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { useGameStore } from '../store/gameStore';
 
 export const ResultsScreen: React.FC = () => {
-  const { gameplay, setScreen, resetGame } = useGameStore();
+  const { gameplay, players, setScreen, resetGame } = useGameStore();
   
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -33,6 +33,22 @@ export const ResultsScreen: React.FC = () => {
   const maxCombo = Math.max(gameplay.comboP1, gameplay.comboP2);
   const avgAccuracy = (gameplay.accuracyP1 + gameplay.accuracyP2) / 2;
   
+  // Determine win message based on character and outcome
+  const getWinMessage = () => {
+    if (!gameplay.outcome) return 'RESULTS';
+    
+    // For single player, assume player 1 is the main player
+    const playerCharacter = players.p1.characterId;
+    
+    if (gameplay.outcome === 'bear_escaped') {
+      return playerCharacter === 'bear' ? 'BEAR ESCAPED - YOU WIN!' : 'BEAR ESCAPED - YOU LOSE!';
+    } else if (gameplay.outcome === 'man_caught') {
+      return playerCharacter === 'man' ? 'MAN CAUGHT THE BEAR - YOU WIN!' : 'MAN CAUGHT THE BEAR - YOU LOSE!';
+    }
+    
+    return 'RESULTS';
+  };
+  
   const getStars = (accuracy: number) => {
     if (accuracy >= 95) return 5;
     if (accuracy >= 85) return 4;
@@ -50,7 +66,7 @@ export const ResultsScreen: React.FC = () => {
         {/* Title */}
         <div className="text-center mb-12">
           <h1 className="retro-title text-5xl mb-6 pixel-glow-pink">
-            {gameplay.outcome === 'bear_escaped' ? 'BEAR ESCAPED' : gameplay.outcome === 'man_caught' ? 'MAN CAUGHT THE BEAR' : 'RESULTS'}
+            {getWinMessage()}
           </h1>
           <div className="flex justify-center items-center gap-4 mb-4">
             {Array.from({ length: 5 }).map((_, i) => (

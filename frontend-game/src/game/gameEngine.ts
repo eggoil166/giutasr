@@ -38,12 +38,19 @@ export class GameEngine {
   private camera: THREE.PerspectiveCamera | null = null;
   private playfield: THREE.Group | null = null;
   private ringMeshes: THREE.Mesh[] = [];
+  private ringGlowMeshes: THREE.Mesh[] = [];
+  private noteHaloMeshes = new Map<string, THREE.Mesh>();
+  private ringGlow: number[] = [0, 0, 0, 0];
+  private ringBaseColors: number[] = [0x00ff00, 0xff0000, 0xffff00, 0x0066ff];
+  private noteHitGlow = new Map<string, number>();
   private noteGeometry: THREE.BufferGeometry | null = null;
   private noteMaterials: THREE.MeshStandardMaterial[] = [];
+  private noteHaloMaterial: THREE.MeshBasicMaterial | null = null;
   private noteMeshes = new Map<string, THREE.Mesh>();
   private readonly LANE_POSITIONS_3D = [-3, -1, 1, 3];
   private readonly HIT_PLANE_Y = -5.0;
   private readonly Z_PER_MS = 0.02;
+  private readonly RING_BASE_EMISSIVE = 0.25;
   
   private readonly NOTE_SPEED = 150;
   private readonly HIT_LINE_Y = 400;
@@ -65,9 +72,9 @@ export class GameEngine {
   private spacebarPressed = false;
   private spacebarBoostMultiplier = 1.0;
 
-  private readonly PERFECT_WINDOW = 15;
-  private readonly GREAT_WINDOW = 30;
-  private readonly GOOD_WINDOW = 50;
+  private readonly PERFECT_WINDOW = 25;
+  private readonly GREAT_WINDOW = 55;
+  private readonly GOOD_WINDOW = 100;
 
   private totalNotes = 0;
   private perfectHits = 0;
@@ -343,20 +350,7 @@ export class GameEngine {
       this.drawHitTargets();
     }
     
-    // Draw lane indicators with retro colors
-    const laneColors = ['#00ff00', '#ff0000', '#ffff00', '#0066ff'];
-    const laneLabels = ['G', 'R', 'Y', 'B'];
-    
-    this.ctx.font = 'bold 14px "Press Start 2P"';
-    this.ctx.textAlign = 'center';
-    
-    this.LANE_POSITIONS.forEach((x, i) => {
-      this.ctx.fillStyle = laneColors[i];
-      this.ctx.shadowColor = laneColors[i];
-      this.ctx.shadowBlur = 5;
-      this.ctx.fillText(laneLabels[i], x, 30);
-      this.ctx.shadowBlur = 0;
-    });
+    // Skip top lane labels
     
      // Draw accuracy info
      this.ctx.fillStyle = '#ff00ff';
@@ -421,24 +415,58 @@ export class GameEngine {
       dir.position.set(5, 10, 5);
       this.scene.add(ambient, dir);
       
-      // Debug grid to make depth obvious
-      const grid = new THREE.GridHelper(80, 80, 0x444444, 0x222222);
-      grid.position.set(0, this.HIT_PLANE_Y - 0.02, 40);
-      this.playfield.add(grid);
+      // Grid removed to keep only lane divider lines visible
 
-      // Track and hit rings
-      const ringGeo = new THREE.TorusGeometry(0.55, 0.06, 12, 36);
+      // Lane divider bars (thick, high-contrast)
+      const laneXs: number[] = [0, 1, 2, 3].map(i => this.getLaneX(i as 0|1|2|3));
+      const dividerGeo = new THREE.BoxGeometry(0.12, 0.05, 160);
+      const dividerMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x9b59ff, emissiveIntensity: 0.9, metalness: 0.2, roughness: 0.4 });
+      const centerZ = 80;
+      for (let i = 0; i < laneXs.length - 1; i++) {
+        const xMid = (laneXs[i] + laneXs[i + 1]) / 2;
+        const bar = new THREE.Mesh(dividerGeo, dividerMat);
+        bar.position.set(xMid, this.HIT_PLANE_Y + 0.03, centerZ);
+        this.playfield.add(bar);
+      }
+      // Optional outer boundary lines
+      const dx = laneXs[1] - laneXs[0];
+      const leftEdge = new THREE.Mesh(dividerGeo, dividerMat);
+      leftEdge.position.set(laneXs[0] - dx / 2, this.HIT_PLANE_Y + 0.03, centerZ);
+      this.playfield.add(leftEdge);
+      const rightEdge = new THREE.Mesh(dividerGeo, dividerMat);
+      rightEdge.position.set(laneXs[3] + dx / 2, this.HIT_PLANE_Y + 0.03, centerZ);
+      this.playfield.add(rightEdge);
+
+      // Track and hit rings (slightly smaller than note disk)
+      const ringGeo = new THREE.TorusGeometry(0.7, 0.07, 16, 48);
+      // Additive outer glow ring (larger tube and radius)
+      const ringGlowGeo = new THREE.TorusGeometry(0.74, 0.18, 16, 48);
+      const ringGlowMatBase = new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      });
       const laneColors = [0x00ff00, 0xff0000, 0xffff00, 0x0066ff];
       for (let i = 0 as 0|1|2|3; i < 4; i = (i + 1) as 0|1|2|3) {
         const x = this.getLaneX(i);
-        const mat = new THREE.MeshStandardMaterial({ color: laneColors[i], emissive: laneColors[i], emissiveIntensity: 0.2, metalness: 0.0, roughness: 0.9 });
+        const mat = new THREE.MeshStandardMaterial({ color: laneColors[i], emissive: laneColors[i], emissiveIntensity: this.RING_BASE_EMISSIVE, metalness: 0.0, roughness: 0.9 });
         const ring = new THREE.Mesh(ringGeo, mat);
         ring.position.set(x, this.HIT_PLANE_Y, 0);
         ring.rotation.x = Math.PI / 2;
         this.playfield!.add(ring);
         this.ringMeshes[i] = ring;
+
+        const ringGlow = new THREE.Mesh(ringGlowGeo, ringGlowMatBase.clone());
+        ringGlow.position.copy(ring.position);
+        ringGlow.rotation.copy(ring.rotation);
+        ringGlow.visible = false;
+        this.playfield!.add(ringGlow);
+        this.ringGlowMeshes[i] = ringGlow;
       }
       ringGeo.dispose();
+      ringGlowGeo.dispose();
       
       // Notes geometry (disk) and materials
       this.noteGeometry = new THREE.CylinderGeometry(0.8, 0.8, 0.18, 28);
@@ -449,19 +477,51 @@ export class GameEngine {
         new THREE.MeshStandardMaterial({ color: 0x0066ff, emissive: 0x001133, metalness: 0.1, roughness: 0.4 }),
       ];
 
-      console.log('ThreeInitOk');
+      this.noteHaloMaterial = new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.0,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      });
+
     } catch (e) {
       console.warn('ThreeInitFailed', e);
       this.threeEnabled = false;
     }
-    // Decay ring emissive intensity for feedback glow
-    if (this.ringMeshes.length) {
-      for (const ring of this.ringMeshes) {
-        const mat = ring.material as THREE.MeshStandardMaterial;
-        if (mat && mat.emissiveIntensity > 0.25) {
-          mat.emissiveIntensity = Math.max(0.25, mat.emissiveIntensity - 0.05);
+    // Animate ring glow/scale feedback decay (ring turns white while glowing)
+    for (let i = 0; i < this.ringMeshes.length; i++) {
+      const ring = this.ringMeshes[i];
+      if (!ring) continue;
+      const mat = ring.material as THREE.MeshStandardMaterial;
+      const g = this.ringGlow[i] || 0;
+      if (g > 0.01) {
+        mat.color.setHex(0xffffff);
+        mat.emissive.setHex(0xffffff);
+        mat.emissiveIntensity = this.RING_BASE_EMISSIVE + g * 3.2;
+      } else {
+        mat.color.setHex(this.ringBaseColors[i]);
+        mat.emissive.setHex(this.ringBaseColors[i]);
+        mat.emissiveIntensity = this.RING_BASE_EMISSIVE;
+      }
+      const s = 1 + g * 0.45;
+      ring.scale.set(s, s, s);
+      // Outer additive glow ring
+      const ringGlowMesh = this.ringGlowMeshes[i];
+      if (ringGlowMesh) {
+        const m = ringGlowMesh.material as THREE.MeshBasicMaterial;
+        if (g > 0.01) {
+          ringGlowMesh.visible = true;
+          const pulse = 0.6 + 0.4 * Math.sin(this.currentTime / 70);
+          m.opacity = Math.min(1, 0.25 + g * 0.55 * pulse);
+          ringGlowMesh.scale.set(1 + g * 0.2, 1 + g * 0.2, 1 + g * 0.2);
+        } else {
+          ringGlowMesh.visible = false;
+          m.opacity = 0;
         }
       }
+      // slower decay so it lingers a bit longer
+      this.ringGlow[i] = Math.max(0, g - 0.03);
     }
   }
 
@@ -487,17 +547,29 @@ export class GameEngine {
         if (Array.isArray(mesh.material)) (mesh.material as THREE.Material[]).forEach((m: THREE.Material) => m.dispose());
         else (mesh.material as THREE.Material).dispose();
         this.noteMeshes.delete(id);
+        const halo = this.noteHaloMeshes.get(id);
+        if (halo) {
+          this.scene.remove(halo);
+          if (halo.geometry) (halo.geometry as THREE.BufferGeometry).dispose();
+          this.noteHaloMeshes.delete(id);
+        }
       }
     }
     // Create meshes for notes missing a mesh
     for (const n of this.notes) {
       if (this.noteMeshes.has(n.id)) continue;
       const mesh = new THREE.Mesh(this.noteGeometry, this.noteMaterials[n.lane]);
-      // Make disk face the camera similar to rings
-      mesh.rotation.x = Math.PI / 2;
       mesh.position.set(this.getLaneX(n.lane), this.HIT_PLANE_Y, this.timeToZ(n.time));
       this.playfield!.add(mesh);
       this.noteMeshes.set(n.id, mesh);
+
+      if (this.noteHaloMaterial) {
+        const halo = new THREE.Mesh(this.noteGeometry, this.noteHaloMaterial);
+        halo.position.copy(mesh.position);
+        halo.scale.set(1.6, 1.6, 1.6);
+        this.playfield!.add(halo);
+        this.noteHaloMeshes.set(n.id, halo);
+      }
     }
     console.log('ThreeNotesCreated', { count: this.noteMeshes.size });
   }
@@ -509,18 +581,46 @@ export class GameEngine {
       if (!mesh) continue;
       const z = this.timeToZ(n.time);
       mesh.position.z = z;
+      const halo = this.noteHaloMeshes.get(n.id);
+      if (halo) halo.position.z = z;
       // Fade out when hit or long past
       const sustainActive = !!(n.holdDuration && n.holdHeadHitTime !== undefined && !n.releasedEarly && (this.currentTime < (n.holdHeadHitTime + n.holdDuration)));
       const shouldShow = !n.hit || sustainActive;
       mesh.visible = !!(shouldShow && z > -5 && z < 400);
-      
-      // Spacebar boost glow
+      if (halo) halo.visible = this.spacebarPressed;
+
+      // Per-note spacebar glow
+      const mat = mesh.material as THREE.MeshStandardMaterial;
       if (this.spacebarPressed) {
-        const mat = mesh.material as THREE.MeshStandardMaterial;
-        mat.emissiveIntensity = 1.2;
+        mat.color.setHex(0xffffff);
+        mat.emissive.setHex(0xffffff);
+        const pulse = 0.5 + 0.5 * Math.sin(this.currentTime / 90);
+        mat.emissiveIntensity = 2.2 + pulse * 1.0;
+        if (halo && this.noteHaloMaterial) {
+          const haloPulse = 0.5 + 0.5 * Math.sin(this.currentTime / 80);
+          this.noteHaloMaterial.opacity = 0.4 * haloPulse + 0.2;
+          const s = 1.3 + 0.15 * haloPulse;
+          halo.scale.set(s, s, s);
+        }
       } else {
-        const mat = mesh.material as THREE.MeshStandardMaterial;
+        const laneIdx = n.lane;
+        const baseColors = [0x00ff00, 0xff0000, 0xffff00, 0x0066ff];
+        mat.color.setHex(baseColors[laneIdx]);
+        mat.emissive.setHex([0x003300, 0x330000, 0x333300, 0x001133][laneIdx]);
         mat.emissiveIntensity = 0.6;
+      }
+      // Brief hit glow on the note itself
+      const hitGlow = this.noteHitGlow.get(n.id) || 0;
+      if (hitGlow > 0) {
+        const glowPulse = 0.5 + 0.5 * Math.sin(this.currentTime / 60);
+        mat.emissiveIntensity = Math.max(mat.emissiveIntensity, 2.4 * hitGlow + 1.0 + glowPulse * 0.5);
+        if (halo && this.noteHaloMaterial) {
+          halo.visible = true;
+          this.noteHaloMaterial.opacity = Math.max(this.noteHaloMaterial.opacity, 0.35 * hitGlow + 0.2);
+          const s2 = 1.25 + 0.2 * hitGlow;
+          halo.scale.set(s2, s2, s2);
+        }
+        this.noteHitGlow.set(n.id, Math.max(0, hitGlow - 0.05));
       }
     }
   }
@@ -662,6 +762,8 @@ export class GameEngine {
   }
 
   handleInput(lane: 0 | 1 | 2 | 3, _inputType: 'hit', player: number): { judgment: Judgment | null; note: Note | null; accuracy: number } {
+    // Immediate visual feedback on key press: pulse ring
+    this.ringGlow[lane] = 1.0;
     // Time-based detection at the 3D ring plane (z=0)
     const now = this.currentTime;
     const laneNotes = this.notes.filter(note => note.lane === lane && !note.hit);
@@ -689,41 +791,32 @@ export class GameEngine {
       closestNote.holdHeadHitTime = this.currentTime;
     }
     
-    // 3D ring glow feedback
-    const ring = this.ringMeshes[lane];
-    if (ring && ring.material instanceof THREE.MeshStandardMaterial) {
-      const m = ring.material as THREE.MeshStandardMaterial;
-      m.emissiveIntensity = 1.5;
-      // Decay back down over time via update loop below
-    }
-
+    // Determine judgment
     let judgment: Judgment;
     const baseScore = 100;
-    
-    // Bonus points for matching note type
-  const typeBonus = 1; // simplified; no separate input types currently
-    
-     if (deltaMs <= this.PERFECT_WINDOW) {
-       judgment = { type: 'Perfect', score: Math.floor(baseScore * typeBonus) };
-       this.perfectHits++;
-       // Bear gets extra boost for perfect hits (with spacebar multiplier)
-       this.bearProgress += this.BEAR_HIT_BOOST * 1.5 * this.spacebarBoostMultiplier;
-     } else if (deltaMs <= this.GREAT_WINDOW) {
-       judgment = { type: 'Great', score: Math.floor(70 * typeBonus) };
-       this.greatHits++;
-       // Bear gets normal boost for great hits (with spacebar multiplier)
-       this.bearProgress += this.BEAR_HIT_BOOST * this.spacebarBoostMultiplier;
-     } else if (deltaMs <= this.GOOD_WINDOW) {
-       judgment = { type: 'Good', score: Math.floor(40 * typeBonus) };
-       this.goodHits++;
-       // Bear gets reduced boost for good hits (with spacebar multiplier)
-       this.bearProgress += this.BEAR_HIT_BOOST * 0.7 * this.spacebarBoostMultiplier;
-     } else {
-       judgment = { type: 'Miss', score: 0 };
-       this.missedHits++;
-       
-       console.log('NoteMiss', { player, lane, deltaMs });
-     }
+    const typeBonus = 1;
+    if (deltaMs <= this.PERFECT_WINDOW) {
+      judgment = { type: 'Perfect', score: Math.floor(baseScore * typeBonus) };
+      this.perfectHits++;
+      this.bearProgress += this.BEAR_HIT_BOOST * 1.5 * this.spacebarBoostMultiplier;
+    } else if (deltaMs <= this.GREAT_WINDOW) {
+      judgment = { type: 'Great', score: Math.floor(70 * typeBonus) };
+      this.greatHits++;
+      this.bearProgress += this.BEAR_HIT_BOOST * this.spacebarBoostMultiplier;
+    } else if (deltaMs <= this.GOOD_WINDOW) {
+      judgment = { type: 'Good', score: Math.floor(40 * typeBonus) };
+      this.goodHits++;
+      this.bearProgress += this.BEAR_HIT_BOOST * 0.7 * this.spacebarBoostMultiplier;
+    } else {
+      judgment = { type: 'Miss', score: 0 };
+      this.missedHits++;
+      console.log('NoteMiss', { player, lane, deltaMs });
+    }
+
+    // 3D note glow feedback only on successful hits
+    if (judgment.type !== 'Miss') {
+      this.noteHitGlow.set(closestNote.id, 1.0);
+    }
     
     const accuracy = this.calculateAccuracy();
     console.log('AccuracyUpdated', { player, accuracy });
@@ -821,6 +914,10 @@ export class GameEngine {
         this.scene?.remove(mesh);
       }
       this.noteMeshes.clear();
+      for (const [, halo] of this.noteHaloMeshes) {
+        this.scene?.remove(halo);
+      }
+      this.noteHaloMeshes.clear();
       
       // Dispose scene objects (geometries/materials)
       if (this.scene) {
@@ -843,6 +940,10 @@ export class GameEngine {
       if (this.noteGeometry) {
         this.noteGeometry.dispose();
         this.noteGeometry = null;
+      }
+      if (this.noteHaloMaterial) {
+        this.noteHaloMaterial.dispose();
+        this.noteHaloMaterial = null;
       }
 
       // Dispose renderer

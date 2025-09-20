@@ -336,9 +336,9 @@ export const GameScreen: React.FC = () => {
         <div className="flex-shrink-0">
           <canvas
             ref={canvasRef}
-            width={480}
-            height={500}
-            className="pixel-panel border-4 border-pixel-pink"
+            width={600}
+            height={700}
+            className=""
             style={{ imageRendering: 'pixelated', backgroundColor: 'transparent' }}
           />
           

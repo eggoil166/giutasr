@@ -44,8 +44,7 @@ export const ResultsScreen: React.FC = () => {
   const stars = getStars(avgAccuracy);
   
   return (
-    <div className="min-h-screen pixel-bg flex flex-col items-center justify-center relative">
-      <div className="scanlines"></div>
+    <div className="min-h-screen flex flex-col items-center justify-center relative">
       
       <div className="game-container">
         {/* Title */}
@@ -71,21 +70,21 @@ export const ResultsScreen: React.FC = () => {
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <span className="text-pixel-white text-lg">SCORE</span>
-              <span className="pixel-glow-purple text-xl font-bold">
+              <span className="pixel-glow-purple text-xl">
                 {totalScore.toLocaleString()}
               </span>
             </div>
             
             <div className="flex justify-between items-center">
               <span className="text-pixel-white text-lg">MAX COMBO</span>
-              <span className="pixel-glow-pink text-xl font-bold">
+              <span className="pixel-glow-pink text-xl">
                 {maxCombo}X
               </span>
             </div>
             
             <div className="flex justify-between items-center">
               <span className="text-pixel-white text-lg">ACCURACY</span>
-              <span className="pixel-glow-pink text-xl font-bold">
+              <span className="pixel-glow-pink text-xl">
                 {avgAccuracy.toFixed(1)}%
               </span>
             </div>

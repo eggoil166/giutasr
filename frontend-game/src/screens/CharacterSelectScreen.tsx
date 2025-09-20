@@ -24,7 +24,7 @@ export const CharacterSelectScreen: React.FC = () => {
     <div className="mb-2">
       <div className="flex justify-between text-sm mb-1">
         <span className="text-gray-300">{label}</span>
-        <span className="text-white font-bold">{value}</span>
+        <span className="text-white">{value}</span>
       </div>
       <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
         <div 
@@ -68,7 +68,7 @@ export const CharacterSelectScreen: React.FC = () => {
                       <span className="text-2xl">👤</span>
                     </div>
                   </div>
-                  <p className="text-center font-bold text-white text-sm">{char.name}</p>
+                  <p className="text-center text-white text-sm">{char.name}</p>
                 </div>
               ))}
             </div>
@@ -76,7 +76,7 @@ export const CharacterSelectScreen: React.FC = () => {
             {/* Character Stats */}
             {isSelected && (
               <div className="bg-gray-900/50 rounded-lg p-4">
-                <h3 className="text-white font-bold mb-4 text-center">
+                <h3 className="text-white mb-4 text-center">
                   {CHARACTERS.find(c => c.id === isSelected)?.name} STATS
                 </h3>
                 {CHARACTERS.filter(c => c.id === isSelected).map(char => (

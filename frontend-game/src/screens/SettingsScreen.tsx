@@ -25,7 +25,7 @@ export const SettingsScreen: React.FC = () => {
           <div className="space-y-8">
             {/* Master Volume */}
             <div>
-              <h3 className="text-2xl font-bold text-white mb-4 arcade-text">MASTER VOLUME</h3>
+              <h3 className="text-2xl text-white mb-4 arcade-text">MASTER VOLUME</h3>
               <div className="space-y-4">
                 <div className="flex items-center space-x-4">
                   <span className="text-gray-300 w-12">0%</span>
@@ -47,7 +47,7 @@ export const SettingsScreen: React.FC = () => {
                   <span className="text-gray-300 w-12">100%</span>
                 </div>
                 <div className="text-center">
-                  <span className="text-cyan-400 font-bold text-xl arcade-text">
+                  <span className="text-cyan-400 text-xl arcade-text">
                     {Math.round(settings.volume * 100)}%
                   </span>
                 </div>

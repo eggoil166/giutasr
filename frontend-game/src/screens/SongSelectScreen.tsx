@@ -1,7 +1,5 @@
 import React from 'react';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { NeonButton } from '../components/ui/NeonButton';
-import { GraffitiPanel } from '../components/ui/GraffitiPanel';
 import { useGameStore, Song } from '../store/gameStore';
 
 interface Character {
@@ -256,9 +254,7 @@ export const SongSelectScreen: React.FC = () => {
   };
   
   return (
-    <div className="min-h-screen retro-bg scanlines p-8 relative">
-      {/* Retro grid background */}
-      <div className="absolute inset-0 pixel-bg opacity-15"></div>
+    <div className="min-h-screen p-8 relative">
       
       <div className="game-container">
         {/* Title */}
@@ -293,7 +289,6 @@ export const SongSelectScreen: React.FC = () => {
                       onClick={() => {
                         setSelectedCharIndex(index);
                         selectCharacter(1, char.id);
-                        playNavSfx();
                       }}
                     >
                       <div className="flex items-center space-x-3">

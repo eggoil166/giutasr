@@ -1,4 +1,3 @@
-import React, { useEffect, useRef } from 'react';
 import { useGameStore } from './store/gameStore';
 import { TitleScreen } from './screens/TitleScreen';
 import { ModeSelectScreen } from './screens/ModeSelectScreen';
@@ -7,6 +6,7 @@ import { GameScreen } from './screens/GameScreen';
 import { ResultsScreen } from './screens/ResultsScreen';
 import { HowToPlayScreen } from './screens/HowToPlayScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
+import sound from '../../assets/botanicpanic.mp3';
 
 function App() {
   const { currentScreen } = useGameStore();

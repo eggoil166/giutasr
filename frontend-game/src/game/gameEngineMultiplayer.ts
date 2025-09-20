@@ -61,7 +61,7 @@ export class GameEngine {
   private readonly HIT_PLANE_Y = -5.0;
   private readonly Z_PER_MS = 0.02;
   private readonly RING_BASE_EMISSIVE = 0.25;
-  // private readonly DRUM_TRACK_ANGLE = Math.PI / 12; // 15 degrees in radians for subtle visual separation
+  private readonly DRUM_TRACK_ANGLE = Math.PI / 12; // 15 degrees in radians for subtle visual separation
   
   private readonly NOTE_SPEED = 150;
   private readonly HIT_LINE_Y = 400;
@@ -467,7 +467,7 @@ export class GameEngine {
       this.playfield.add(guitarRightEdge);
       
       // Drum track lane divider bars (pivoted 15 degrees) - 2 lanes
-      const drumLaneXs: number[] = [0, 1].map(i => this.getDrumLaneX(i as 0|1));
+      const drumLaneXs: number[] = [0, 1].map(i => this.getDrumLaneX(i));
       const drumDividerMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xff6600, emissiveIntensity: 0.9, metalness: 0.2, roughness: 0.4 });
       
       // Drum track dividers (pivoted) - only one divider between 2 lanes
@@ -521,7 +521,7 @@ export class GameEngine {
       
       // Create drum track rings (pivoted 15 degrees) - 2 lanes
       for (let i = 0; i < 2; i++) {
-        const x = this.getDrumLaneX(i as 0|1);
+        const x = this.getDrumLaneX(i);
         const mat = new THREE.MeshStandardMaterial({ 
           color: this.drumRingBaseColors[i], 
           emissive: this.drumRingBaseColors[i], 
@@ -662,6 +662,7 @@ export class GameEngine {
   private getLaneX(lane: 0|1|2|3): number {
     // Flip orientation so lane 0 (green) is leftmost and lane 3 (blue) rightmost
     const x = this.LANE_POSITIONS_3D[3 - lane];
+    console.log(`Guitar lane ${lane} positioned at x=${x}`);
     return x;
   }
   
@@ -669,6 +670,7 @@ export class GameEngine {
     // Drum lanes positioned to the right of guitar lanes
     // Based on paint visualization: drum track should be clearly separated and angled
     const x = this.DRUM_LANE_POSITIONS_3D[lane]; // Direct positioning to the right
+    console.log(`Drum lane ${lane} positioned at x=${x}`);
     return x;
   }
 
@@ -697,16 +699,14 @@ export class GameEngine {
       
       // Choose material based on track type
       const material = n.track === 'drum' 
-        ? this.drumNoteMaterials[n.lane < 2 ? n.lane : (n.lane % 2)] 
+        ? this.drumNoteMaterials[n.lane] 
         : this.noteMaterials[n.lane];
       
       const mesh = new THREE.Mesh(this.noteGeometry, material);
       
       // Position based on track type
       if (n.track === 'drum') {
-        // For drum notes, lane should be 0 or 1, but we need to handle the case where it might be 0-3
-        const drumLane = n.lane < 2 ? n.lane as 0|1 : (n.lane % 2) as 0|1;
-        mesh.position.set(this.getDrumLaneX(drumLane), this.HIT_PLANE_Y, this.timeToZ(n.time));
+        mesh.position.set(this.getDrumLaneX(n.lane), this.HIT_PLANE_Y, this.timeToZ(n.time));
         // mesh.rotation.z = this.DRUM_TRACK_ANGLE; // Temporarily remove rotation to test positioning
       } else {
         mesh.position.set(this.getLaneX(n.lane), this.HIT_PLANE_Y, this.timeToZ(n.time));

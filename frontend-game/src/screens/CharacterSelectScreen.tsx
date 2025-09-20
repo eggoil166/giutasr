@@ -36,11 +36,10 @@ export const CharacterSelectScreen: React.FC = () => {
   );
   
   const CharacterCard: React.FC<{ player: 1 | 2; character: Character | null }> = ({ player, character }) => {
-    // In multiplayer, determine which player this card represents based on lobby side
-    const isLocalPlayer = lobby.mode === 'solo' ? player === 1 : 
-      (lobby.side === 'red' ? player === 1 : player === 2);
     const isSelected = player === 1 ? players.p1.characterId : players.p2.characterId;
     const isP2Available = lobby.connectedP2 || player === 1;
+    const isMultiplayer = lobby.mode === 'host' || lobby.mode === 'join' || lobby.connectedP2;
+    const isPlayer2AutoAssigned = isMultiplayer && player === 2 && players.p1.characterId;
     
     return (
       <PixelPanel variant={isSelected ? 'outlined' : 'default'} className="h-full">
@@ -51,31 +50,46 @@ export const CharacterSelectScreen: React.FC = () => {
           {!isP2Available && (
             <p className="text-gray-500 text-sm">Waiting for opponent...</p>
           )}
+          {isPlayer2AutoAssigned && (
+            <p className="text-yellow-400 text-sm font-semibold">Auto-assigned based on Player 1's choice</p>
+          )}
         </div>
         
         {isP2Available && (
           <>
-            {/* Character Selection,  */}
+            {/* Character Selection */}
             <div className="grid grid-cols-2 gap-4 mb-6">
-              {CHARACTERS.map((char) => (
-                <div
-                  key={char.id}
-                  onClick={() => isLocalPlayer ? selectCharacter(player, char.id) : null}
-                  className={`relative transition-all duration-200 ${
-                    isLocalPlayer ? 'cursor-pointer hover:scale-105' : 'cursor-not-allowed opacity-50'
-                  } ${
-                    isSelected === char.id ? 'ring-2 ring-pink-500' : ''
-                  }`}
-                >
-                  {/* Character Image Placeholder */}
-                  <div className={`w-full h-32 bg-gradient-to-br ${char.color} rounded-lg flex items-center justify-center mb-2 shadow-lg`}>
-                    <div className="w-16 h-20 bg-black/30 rounded-lg flex items-center justify-center">
-                      <span className="text-2xl">👤</span>
+              {CHARACTERS.map((char) => {
+                const isDisabled = isMultiplayer && player === 2;
+                const isAutoSelected = isPlayer2AutoAssigned && isSelected === char.id;
+                
+                return (
+                  <div
+                    key={char.id}
+                    onClick={() => !isDisabled && selectCharacter(player, char.id)}
+                    className={`relative transition-all duration-200 ${
+                      isDisabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:scale-105'
+                    } ${
+                      isSelected === char.id ? 'ring-2 ring-pink-500' : ''
+                    } ${
+                      isAutoSelected ? 'ring-2 ring-yellow-400' : ''
+                    }`}
+                  >
+                    {/* Character Image Placeholder */}
+                    <div className={`w-full h-32 bg-gradient-to-br ${char.color} rounded-lg flex items-center justify-center mb-2 shadow-lg`}>
+                      <div className="w-16 h-20 bg-black/30 rounded-lg flex items-center justify-center">
+                        <span className="text-2xl">👤</span>
+                      </div>
                     </div>
+                    <p className="text-center text-white text-sm">{char.name}</p>
+                    {isAutoSelected && (
+                      <div className="absolute top-1 right-1 bg-yellow-400 text-black text-xs px-1 rounded">
+                        AUTO
+                      </div>
+                    )}
                   </div>
-                  <p className="text-center text-white text-sm">{char.name}</p>
-                </div>
-              ))}
+                );
+              })}
             </div>
             
             {/* Character Stats */}
@@ -120,7 +134,7 @@ export const CharacterSelectScreen: React.FC = () => {
           
           <NeonButton
             variant="primary"
-            disabled={!players.p1.characterId}
+            disabled={!players.p1.characterId || (isMultiplayer && !players.p2.characterId)}
             onClick={() => setScreen('LOBBY')}
           >
             NEXT →

@@ -105,7 +105,6 @@ export const GameScreen: React.FC = () => {
       const conn = getConn();
       if (conn) {
         try {
-          console.log('Syncing game state to server:', { bearProgress, manProgress, gameOver, gameResult });
           LobbyApi.updateGameState(conn, lobby.code, bearProgress, manProgress, gameOver, gameResult);
         } catch (e) {
           console.warn('Failed to sync game state:', e);
@@ -155,16 +154,6 @@ export const GameScreen: React.FC = () => {
       const currentManProgress = isMultiplayer ? gameplay.manProgress : stats.manProgress;
       const currentGameOver = isMultiplayer ? gameplay.synchronizedGameOver : stats.gameOver;
       const currentGameResult = isMultiplayer ? gameplay.synchronizedGameResult : stats.gameResult;
-      
-      // Debug logging for synchronization
-      if (isMultiplayer && (currentBearProgress !== bearProgress || currentManProgress !== manProgress)) {
-        console.log('Bear/Man Progress Sync:', {
-          local: { bear: stats.bearProgress, man: stats.manProgress },
-          synced: { bear: currentBearProgress, man: currentManProgress },
-          gameOver: { local: stats.gameOver, synced: currentGameOver },
-          gameResult: { local: stats.gameResult, synced: currentGameResult }
-        });
-      }
       
       setBearProgress(currentBearProgress);
       setManProgress(currentManProgress);

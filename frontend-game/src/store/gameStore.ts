@@ -128,24 +128,35 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
   
   selectCharacter: (player, characterId) => {
-    const st = get();
-    console.log('CharacterSelected', { 
-      player, 
-      characterId, 
-      lobbySide: st.lobby.side, 
-      lobbyMode: st.lobby.mode,
-      currentP1: st.players.p1.characterId,
-      currentP2: st.players.p2.characterId
+    console.log('CharacterSelected', { player, characterId });
+    
+    set((state) => {
+      const newPlayers = { ...state.players };
+      
+      // In multiplayer mode, only allow Player 1 to select characters
+      if (state.lobby.mode !== 'solo' && player !== 1) {
+        console.log('Player 2 cannot select character in multiplayer mode - character is auto-assigned');
+        return { players: newPlayers }; // No change
+      }
+      
+      // Assign character to the selected player
+      newPlayers[player === 1 ? 'p1' : 'p2'] = { characterId, ready: true };
+      
+      // In multiplayer mode, if Player 1 selects a character, automatically assign the other character to Player 2
+      if (state.lobby.mode !== 'solo' && player === 1) {
+        const otherCharacter = characterId === 'bear' ? 'man' : 'bear';
+        newPlayers.p2 = { characterId: otherCharacter, ready: true };
+        console.log('Auto-assigned character to Player 2:', { characterId: otherCharacter });
+      }
+      
+      return { players: newPlayers };
     });
-    set((state) => ({
-      players: {
-        ...state.players,
-        [player === 1 ? 'p1' : 'p2']: { characterId, ready: true },
-      },
-    }));
-    // Persist if local side - always sync to server regardless of player parameter
+    
+    // Persist if local side
+    const st = get();
     const conn = getConn();
-    if (st.lobby.mode !== 'solo' && st.lobby.code && conn) {
+    const localPlayer = st.lobby.side === 'blue' ? 2 : 1;
+    if (st.lobby.mode !== 'solo' && player === localPlayer && st.lobby.code && conn) {
       try { LobbyApi.setCharacter(conn, st.lobby.code, characterId); } catch (e) { console.warn('setCharacter failed', e); }
     }
   },
@@ -192,32 +203,37 @@ export const useGameStore = create<GameState>((set, get) => ({
         if (localSongId && !remoteSongId) { const c = getConn(); if (c && get().lobby.code) { try { LobbyApi.setSong(c, get().lobby.code!, localSongId); } catch (e) { console.warn('setSong (host sync) failed', e); } } }
       }
       if (row) {
-        // Debug logging for lobby updates
-        if (row.bearProgress !== undefined || row.manProgress !== undefined || row.gameOver !== undefined) {
-          console.log('Lobby Update:', {
-            bearProgress: row.bearProgress,
-            manProgress: row.manProgress,
-            gameOver: row.gameOver,
-            gameResult: row.gameResult
-          });
-        }
-        
-        // Debug logging for character assignment
-        if (row.redChar !== undefined || row.blueChar !== undefined) {
-          console.log('Character Assignment:', {
-            lobbySide: get().lobby.side,
-            redChar: row.redChar,
-            blueChar: row.blueChar,
-            currentP1: get().players.p1.characterId,
-            currentP2: get().players.p2.characterId
-          });
-        }
-        
         set((state) => ({
-          players: {
-            p1: { ...state.players.p1, characterId: state.lobby.side === 'red' ? (row.redChar ?? state.players.p1.characterId) : state.players.p1.characterId, ready: state.players.p1.ready },
-            p2: { ...state.players.p2, characterId: state.lobby.side === 'blue' ? (row.blueChar ?? state.players.p2.characterId) : state.players.p2.characterId, ready: state.players.p2.ready },
-          },
+          players: (() => {
+            const newPlayers = { ...state.players };
+            
+            // Update Player 1 character (host/red side)
+            if (state.lobby.side === 'blue') {
+              // We are blue side, so red_char is Player 1
+              newPlayers.p1 = { ...state.players.p1, characterId: row.redChar ?? state.players.p1.characterId, ready: state.players.p1.ready };
+            } else {
+              // We are red side, so we are Player 1
+              newPlayers.p1 = { ...state.players.p1, characterId: state.players.p1.characterId, ready: state.players.p1.ready };
+            }
+            
+            // Update Player 2 character (join/blue side)
+            if (state.lobby.side !== 'blue') {
+              // We are red side, so blue_char is Player 2
+              newPlayers.p2 = { ...state.players.p2, characterId: row.blueChar ?? state.players.p2.characterId, ready: state.players.p2.ready };
+            } else {
+              // We are blue side, so we are Player 2
+              newPlayers.p2 = { ...state.players.p2, characterId: state.players.p2.characterId, ready: state.players.p2.ready };
+            }
+            
+            // Auto-assign remaining character to Player 2 if Player 1 has a character but Player 2 doesn't
+            if (newPlayers.p1.characterId && !newPlayers.p2.characterId) {
+              const otherCharacter = newPlayers.p1.characterId === 'bear' ? 'man' : 'bear';
+              newPlayers.p2 = { characterId: otherCharacter, ready: true };
+              console.log('Auto-assigned remaining character to Player 2:', { characterId: otherCharacter });
+            }
+            
+            return newPlayers;
+          })(),
           gameplay: { 
             ...state.gameplay, 
             scoreP1: row.redScore ?? state.gameplay.scoreP1, 
@@ -247,32 +263,37 @@ export const useGameStore = create<GameState>((set, get) => ({
       set((state) => ({ lobby: { ...state.lobby, connectedP2: !!row?.red && !!row?.blue, redPresent: !!row?.red, bluePresent: !!row?.blue, side: state.lobby.side, p1Ready: row?.redReady ?? state.lobby.p1Ready, p2Ready: row?.blueReady ?? state.lobby.p2Ready } }));
       if (row?.started && get().currentScreen !== 'GAME') { set({ currentScreen: 'GAME' }); }
       if (row) {
-        // Debug logging for lobby updates
-        if (row.bearProgress !== undefined || row.manProgress !== undefined || row.gameOver !== undefined) {
-          console.log('Lobby Update:', {
-            bearProgress: row.bearProgress,
-            manProgress: row.manProgress,
-            gameOver: row.gameOver,
-            gameResult: row.gameResult
-          });
-        }
-        
-        // Debug logging for character assignment
-        if (row.redChar !== undefined || row.blueChar !== undefined) {
-          console.log('Character Assignment:', {
-            lobbySide: get().lobby.side,
-            redChar: row.redChar,
-            blueChar: row.blueChar,
-            currentP1: get().players.p1.characterId,
-            currentP2: get().players.p2.characterId
-          });
-        }
-        
         set((state) => ({
-          players: {
-            p1: { ...state.players.p1, characterId: state.lobby.side === 'red' ? (row.redChar ?? state.players.p1.characterId) : state.players.p1.characterId, ready: state.players.p1.ready },
-            p2: { ...state.players.p2, characterId: state.lobby.side === 'blue' ? (row.blueChar ?? state.players.p2.characterId) : state.players.p2.characterId, ready: state.players.p2.ready },
-          },
+          players: (() => {
+            const newPlayers = { ...state.players };
+            
+            // Update Player 1 character (host/red side)
+            if (state.lobby.side === 'blue') {
+              // We are blue side, so red_char is Player 1
+              newPlayers.p1 = { ...state.players.p1, characterId: row.redChar ?? state.players.p1.characterId, ready: state.players.p1.ready };
+            } else {
+              // We are red side, so we are Player 1
+              newPlayers.p1 = { ...state.players.p1, characterId: state.players.p1.characterId, ready: state.players.p1.ready };
+            }
+            
+            // Update Player 2 character (join/blue side)
+            if (state.lobby.side !== 'blue') {
+              // We are red side, so blue_char is Player 2
+              newPlayers.p2 = { ...state.players.p2, characterId: row.blueChar ?? state.players.p2.characterId, ready: state.players.p2.ready };
+            } else {
+              // We are blue side, so we are Player 2
+              newPlayers.p2 = { ...state.players.p2, characterId: state.players.p2.characterId, ready: state.players.p2.ready };
+            }
+            
+            // Auto-assign remaining character to Player 2 if Player 1 has a character but Player 2 doesn't
+            if (newPlayers.p1.characterId && !newPlayers.p2.characterId) {
+              const otherCharacter = newPlayers.p1.characterId === 'bear' ? 'man' : 'bear';
+              newPlayers.p2 = { characterId: otherCharacter, ready: true };
+              console.log('Auto-assigned remaining character to Player 2:', { characterId: otherCharacter });
+            }
+            
+            return newPlayers;
+          })(),
           gameplay: { 
             ...state.gameplay, 
             scoreP1: row.redScore ?? state.gameplay.scoreP1, 

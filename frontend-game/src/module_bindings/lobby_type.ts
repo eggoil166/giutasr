@@ -47,6 +47,7 @@ export type Lobby = {
   started: boolean,
   redScore: number,
   blueScore: number,
+  // Bear vs Man chase mechanics
   bearProgress: number,
   manProgress: number,
   gameOver: boolean,

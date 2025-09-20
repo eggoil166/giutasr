@@ -35,31 +35,12 @@ export class GameEngine {
   private readonly LANE_POSITIONS = [120, 200, 280, 360]; // 4 lanes
   private readonly NOTE_SIZE = 25;
   
-  // Guitar Hero style hit targets
-  private readonly HIT_TARGET_SIZE = 30;
-  private hitTargetGlow: number[] = [0, 0, 0, 0]; // Glow intensity for each lane
-  private hitTargetGlowTime: number[] = [0, 0, 0, 0]; // Glow duration for each lane
-  
-  // Chase mechanics - Bear vs Man
-  private bearProgress = 10.0; // Bear starts at 5% progress
-  private manProgress = 0.0; // Man starts at 0% progress
-  private readonly MAN_CHASE_SPEED = 0.2; // Man's constant chase speed (% per second)
-  private readonly BEAR_HIT_BOOST = 2.0; // How much bear advances per hit (%)
-  private readonly BEAR_MISS_PENALTY = 0.5; // How much bear slows down per miss (%)
-  private gameOver = false;
-  private gameResult: 'bear_escaped' | 'man_caught' | null = null;
-  
-  // Spacebar boost mechanics
-  private spacebarPressed = false;
-  private spacebarBoostMultiplier = 1.0;
-  
-  // Judgment timing windows (ms) - much tighter for precise timing
-  private readonly PERFECT_WINDOW = 15;  // Very tight for perfect hits
-  private readonly GREAT_WINDOW = 30;   //  
+  // Hit target + visual glow arrays
   private readonly HIT_TARGET_SIZE = 30;
   private hitTargetGlow: number[] = [0, 0, 0, 0];
   private hitTargetGlowTime: number[] = [0, 0, 0, 0];
 
+  // Chase mechanics
   private bearProgress = 10.0;
   private manProgress = 0.0;
   private readonly MAN_CHASE_SPEED = 0.2;
@@ -68,12 +49,40 @@ export class GameEngine {
   private gameOver = false;
   private gameResult: 'bear_escaped' | 'man_caught' | null = null;
 
+  // Spacebar mechanics
   private spacebarPressed = false;
   private spacebarBoostMultiplier = 1.0;
 
-  private readonly PERFECT_WINDOW = 25;
-  private readonly GREAT_WINDOW = 55;
+  // Timing windows
+  private readonly PERFECT_WINDOW = 15;
+  private readonly GREAT_WINDOW = 30;
   private readonly GOOD_WINDOW = 140;
+
+  // 3D disabled placeholder flag (some code checks it)
+  private threeEnabled = false;
+  // 3D placeholders
+  private renderer?: any;
+  private scene?: any;
+  private camera?: any;
+  private playfield?: any;
+  private threeCanvas?: HTMLCanvasElement;
+  private readonly LANE_POSITIONS_3D = [-2.2, -0.75, 0.75, 2.2];
+  private readonly HIT_PLANE_Y = 0;
+  private readonly Z_PER_MS = 0.05;
+  private noteGeometry?: any;
+  private noteMaterials: any[] = [];
+  private tailGeometry?: any;
+  private tailMaterials: any[] = [];
+  private noteMeshes = new Map<string, any>();
+  private noteHaloMaterial?: any;
+  private noteHaloMeshes = new Map<string, any>();
+  private noteTailMeshes = new Map<string, any>();
+  private noteHitGlow = new Map<string, number>();
+  private ringMeshes: any[] = [undefined, undefined, undefined, undefined];
+  private ringGlowMeshes: any[] = [undefined, undefined, undefined, undefined];
+  private ringGlow: number[] = [0,0,0,0];
+  private readonly RING_BASE_EMISSIVE = 0.6;
+  private ringBaseColors = [0x00ff00, 0xff0000, 0xffff00, 0x0066ff];
 
   private totalNotes = 0;
   private perfectHits = 0;
@@ -89,9 +98,7 @@ export class GameEngine {
     this.gainNode = gainNode;
     this.setupSpacebarDetection();
 
-    if (this.threeEnabled) {
-      this.initThree();
-    }
+  // Leave 3D off unless explicitly enabled later
   }
   
   private setupSpacebarDetection() {
@@ -896,3 +903,14 @@ export class GameEngine {
        spacebarBoostMultiplier: this.spacebarBoostMultiplier
     };
   }
+
+  stop() {
+    if (!this.running) return;
+    this.running = false;
+    if (this.rafId) cancelAnimationFrame(this.rafId);
+    this.rafId = null;
+    if (this.audioElement) {
+      try { this.audioElement.pause(); } catch { /* ignore */ }
+    }
+  }
+}

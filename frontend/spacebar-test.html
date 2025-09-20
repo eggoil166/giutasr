@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spacebar Test - Gesture Tracker</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .container {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 40px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 90%;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .status-box {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 30px;
+            border-radius: 15px;
+            margin: 20px 0;
+            border: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .status-box.active {
+            background: rgba(0, 255, 0, 0.2);
+            border-color: #00ff00;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+        }
+
+        .status-text {
+            font-size: 1.8em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .status-text.active {
+            color: #00ff00;
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
+        }
+
+        .counter {
+            font-size: 1.2em;
+            margin: 10px 0;
+        }
+
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .instructions h3 {
+            margin-top: 0;
+            color: #ffd700;
+        }
+
+        .instructions ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+
+        .instructions li {
+            margin: 8px 0;
+            line-height: 1.4;
+        }
+
+        .gesture-indicator {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: #333;
+            margin: 20px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2em;
+            transition: all 0.3s ease;
+        }
+
+        .gesture-indicator.active {
+            background: #00ff00;
+            box-shadow: 0 0 30px rgba(0, 255, 0, 0.8);
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .footer {
+            margin-top: 30px;
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
+        .key-display {
+            font-family: 'Courier New', monospace;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px 20px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-size: 1.1em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎸 Gesture Tracker Test</h1>
+        
+        <div class="status-box" id="statusBox">
+            <div class="status-text" id="statusText">SPACEBAR NOT PRESSED</div>
+            <div class="counter">Press Count: <span id="pressCount">0</span></div>
+            <div class="counter">Release Count: <span id="releaseCount">0</span></div>
+        </div>
+
+        <div class="gesture-indicator" id="gestureIndicator">
+            ⏸️
+        </div>
+
+        <div class="key-display">
+            Last Key Event: <span id="lastEvent">None</span>
+        </div>
+
+        <div class="instructions">
+            <h3>📋 How to Test:</h3>
+            <ol>
+                <li>Make sure the OpenCV tracker is running: <code>python giutasr/backend/FillingIn.py</code></li>
+                <li>Position yourself in front of the camera</li>
+                <li>Raise 2+ fingers on each hand above your shoulders</li>
+                <li>Watch the status change to "SPACEBAR PRESSED"</li>
+                <li>Lower your hands to release the spacebar</li>
+            </ol>
+        </div>
+
+        <div class="footer">
+            <p>This page detects spacebar events from the gesture tracker</p>
+            <p>Make sure to focus this window for keyboard detection</p>
+        </div>
+    </div>
+
+    <script>
+        let pressCount = 0;
+        let releaseCount = 0;
+        let isSpacebarPressed = false;
+
+        const statusBox = document.getElementById('statusBox');
+        const statusText = document.getElementById('statusText');
+        const pressCountElement = document.getElementById('pressCount');
+        const releaseCountElement = document.getElementById('releaseCount');
+        const gestureIndicator = document.getElementById('gestureIndicator');
+        const lastEventElement = document.getElementById('lastEvent');
+
+        function updateDisplay() {
+            if (isSpacebarPressed) {
+                statusBox.classList.add('active');
+                statusText.textContent = 'SPACEBAR PRESSED';
+                statusText.classList.add('active');
+                gestureIndicator.classList.add('active');
+                gestureIndicator.textContent = '▶️';
+            } else {
+                statusBox.classList.remove('active');
+                statusText.textContent = 'SPACEBAR NOT PRESSED';
+                statusText.classList.remove('active');
+                gestureIndicator.classList.remove('active');
+                gestureIndicator.textContent = '⏸️';
+            }
+            
+            pressCountElement.textContent = pressCount;
+            releaseCountElement.textContent = releaseCount;
+        }
+
+        // Listen for keydown events
+        document.addEventListener('keydown', function(event) {
+            if (event.code === 'Space' && !isSpacebarPressed) {
+                event.preventDefault(); // Prevent page scroll
+                isSpacebarPressed = true;
+                pressCount++;
+                lastEventElement.textContent = `Key Down - ${new Date().toLocaleTimeString()}`;
+                updateDisplay();
+                console.log('Spacebar pressed!');
+            }
+        });
+
+        // Listen for keyup events
+        document.addEventListener('keyup', function(event) {
+            if (event.code === 'Space' && isSpacebarPressed) {
+                event.preventDefault(); // Prevent page scroll
+                isSpacebarPressed = false;
+                releaseCount++;
+                lastEventElement.textContent = `Key Up - ${new Date().toLocaleTimeString()}`;
+                updateDisplay();
+                console.log('Spacebar released!');
+            }
+        });
+
+        // Focus the window to ensure keyboard events are captured
+        window.addEventListener('load', function() {
+            window.focus();
+        });
+
+        // Keep focus on the window
+        document.addEventListener('click', function() {
+            window.focus();
+        });
+
+        // Initial display update
+        updateDisplay();
+
+        // Add some visual feedback for debugging
+        console.log('Spacebar test page loaded. Waiting for spacebar events...');
+        console.log('Make sure the OpenCV tracker is running and this window is focused.');
+    </script>
+</body>
+</html>

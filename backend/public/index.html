@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guitar Super Power - Chart Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 1.1em;
+            transition: border-color 0.3s ease;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .generate-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.2em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .generate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .generate-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .result {
+            display: none;
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #28a745;
+        }
+
+        .result h3 {
+            color: #28a745;
+            margin-bottom: 15px;
+        }
+
+        .result p {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .download-btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 10px;
+            transition: background 0.3s ease;
+        }
+
+        .download-btn:hover {
+            background: #218838;
+        }
+
+        .charts-list {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .charts-list h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .chart-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: white;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .chart-info {
+            flex: 1;
+        }
+
+        .chart-name {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .chart-artist {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .chart-download {
+            padding: 5px 15px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 3px;
+            font-size: 0.9em;
+        }
+
+        .chart-download:hover {
+            background: #5a6fd8;
+        }
+
+        .error {
+            display: none;
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8d7da;
+            color: #721c24;
+            border-radius: 5px;
+            border-left: 4px solid #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎸 Guitar Super Power</h1>
+            <p>Generate Clone Hero charts with AI</p>
+        </div>
+
+        <form id="chartForm">
+            <div class="form-group">
+                <label for="songName">Song Name:</label>
+                <input type="text" id="songName" name="songName" placeholder="Enter song name (e.g., Bohemian Rhapsody)" required>
+            </div>
+            <button type="submit" class="generate-btn" id="generateBtn">
+                🎵 Generate Chart
+            </button>
+        </form>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Generating chart with Gemini AI...</p>
+        </div>
+
+        <div class="result" id="result">
+            <h3>✅ Chart Generated Successfully!</h3>
+            <p><strong>Song:</strong> <span id="resultSong"></span></p>
+            <p><strong>Artist:</strong> <span id="resultArtist"></span></p>
+            <p><strong>Genre:</strong> <span id="resultGenre"></span></p>
+            <a href="#" class="download-btn" id="downloadBtn">📥 Download Chart</a>
+        </div>
+
+        <div class="error" id="error">
+            <strong>Error:</strong> <span id="errorMessage"></span>
+        </div>
+
+        <div class="charts-list" id="chartsList">
+            <h3>📚 Available Charts</h3>
+            <div id="chartsContainer">
+                <p>Loading charts...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3001/api';
+        
+        // Load existing charts on page load
+        document.addEventListener('DOMContentLoaded', loadCharts);
+        
+        // Handle form submission
+        document.getElementById('chartForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const songName = document.getElementById('songName').value;
+            const generateBtn = document.getElementById('generateBtn');
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+            const error = document.getElementById('error');
+            
+            // Show loading state
+            generateBtn.disabled = true;
+            loading.style.display = 'block';
+            result.style.display = 'none';
+            error.style.display = 'none';
+            
+            try {
+                const response = await fetch(`${API_BASE}/generate-chart`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ songName })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Show success result
+                    document.getElementById('resultSong').textContent = songName;
+                    document.getElementById('resultArtist').textContent = 'Generated by Gemini AI';
+                    document.getElementById('resultGenre').textContent = 'AI Generated';
+                    document.getElementById('downloadBtn').href = `${API_BASE}/charts/${encodeURIComponent(data.chartFile)}`;
+                    
+                    result.style.display = 'block';
+                    
+                    // Reload charts list
+                    loadCharts();
+                } else {
+                    throw new Error(data.message || 'Failed to generate chart');
+                }
+            } catch (err) {
+                document.getElementById('errorMessage').textContent = err.message;
+                error.style.display = 'block';
+            } finally {
+                generateBtn.disabled = false;
+                loading.style.display = 'none';
+            }
+        });
+        
+        // Load existing charts
+        async function loadCharts() {
+            try {
+                const response = await fetch(`${API_BASE}/charts`);
+                const charts = await response.json();
+                
+                const container = document.getElementById('chartsContainer');
+                
+                if (charts.length === 0) {
+                    container.innerHTML = '<p>No charts available yet.</p>';
+                    return;
+                }
+                
+                container.innerHTML = charts.map(chart => `
+                    <div class="chart-item">
+                        <div class="chart-info">
+                            <div class="chart-name">${chart.songName}</div>
+                            <div class="chart-artist">${chart.artist} • ${chart.genre}</div>
+                        </div>
+                        <a href="${API_BASE}/charts/${encodeURIComponent(chart.filename)}" class="chart-download">Download</a>
+                    </div>
+                `).join('');
+            } catch (err) {
+                document.getElementById('chartsContainer').innerHTML = '<p>Error loading charts.</p>';
+            }
+        }
+    </script>
+</body>
+</html>

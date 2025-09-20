@@ -21,6 +21,14 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('uploads'));
 
+// Serve the web interface
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Serve the main interface
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 // Ensure uploads directory exists
 const uploadsDir = path.join(__dirname, 'uploads');
 fs.ensureDirSync(uploadsDir);
@@ -561,17 +569,18 @@ MusicStream = ${songName}.mp3
   N 52224 1
 }
 
-CRITICAL REQUIREMENTS - READ CAREFULLY:
-1. FORMAT: Use EXACTLY "tick = N fret length" (e.g., "768 = N 0 100", "1152 = N 1 192")
-2. COMPLETENESS: Generate DENSE charts with notes EVERY 192 ticks (every beat) for the ENTIRE song duration
-3. DURATION: If song is 5 minutes at 120 BPM, generate notes from tick 0 to tick 115200 (5*60*120*192/60)
-4. DENSITY: Fill EVERY beat with notes - no gaps longer than 192 ticks between notes
-5. PATTERNS: Create realistic guitar patterns that match the song's rhythm and structure
-6. NO COMMENTS: Do NOT use ANY comments whatsoever - no "//" comments at all
+CRITICAL FORMAT REQUIREMENTS - EXACT Clone Hero Format:
+1. [Song] section: Use curly braces { } and quote all string values
+   Example: [Song] { Offset = 0, Resolution = 192, Player2 = bass, Difficulty = 0, PreviewStart = 0, PreviewEnd = 0, Genre = "rock", MediaType = "cd", MusicStream = "song.ogg" }
+2. [SyncTrack] section: Include TS (time signature) entries and BPM changes
+   Example: [SyncTrack] { 0 = TS 4, 0 = B 120000, 1152 = TS 6, 1152 = B 130000 }
+3. Note format: Use "tick = N fret length" where length is 0 for normal notes, >0 for sustained notes
+   Example: "768 = N 2 0" (normal note), "768 = N 2 192" (sustained note)
+4. Generate DENSE charts with notes EVERY 192 ticks (every beat) for the ENTIRE song duration
+5. Create realistic guitar patterns that match the song's rhythm and structure
+6. NO COMMENTS: Do NOT use ANY comments whatsoever - no "//" or "#" comments at all
 7. NO PLACEHOLDERS: Do NOT use phrases like "Continue this pattern", "Example", "Ensure you cover"
-8. COMPLETE DATA: Generate ONLY note data in "tick = N fret length" format from start to finish
-9. REALISTIC: Make patterns that sound like actual guitar playing - chords, riffs, solos
-10. ALL DIFFICULTIES: Generate complete charts for ExpertSingle, HardSingle, MediumSingle, EasySingle`;
+8. Generate complete charts for ExpertSingle, HardSingle, MediumSingle, EasySingle`;
     
     const result = await model.generateContent(prompt);
     const response = await result.response;
@@ -603,7 +612,235 @@ CRITICAL REQUIREMENTS - READ CAREFULLY:
     chartContent = chartContent.replace(/#.*?similar patterns.*?\n/g, '');
     
     // Fix format issues - convert "N tick fret" to "tick = N fret length"
-    chartContent = chartContent.replace(/N (\d+) (\d+)/g, '$1 = N $2 100');
+    chartContent = chartContent.replace(/N (\d+) (\d+)/g, '$1 = N $2 0');
+    
+    // Clean up any double curly braces first
+    chartContent = chartContent.replace(/\{\s*\{/g, '{');
+    chartContent = chartContent.replace(/\}\s*\}/g, '}');
+    
+    // Clean up any remaining formatting issues
+    chartContent = chartContent.replace(/\}\s*\[/g, '}\n[');
+    chartContent = chartContent.replace(/\}\s*\{/g, '}\n{');
+    
+    // Fix existing SyncTrack format - convert "B 120.000" to "0 = B 500000"
+    chartContent = chartContent.replace(/B\s+([\d.]+)/g, (match, bpm) => {
+      const microseconds = Math.round(60000000 / parseFloat(bpm));
+      return `0 = B ${microseconds}`;
+    });
+    
+    // Fix existing Events format - convert "E tick "event"" to "tick = E "event""
+    chartContent = chartContent.replace(/E\s+(\d+)\s+"([^"]+)"/g, '$1 = E "$2"');
+    
+    // Add missing newlines between } and next [Section]
+    chartContent = chartContent.replace(/\}\s*\[/g, '}\n[');
+    
+    // Add TS 4 before BPM line in SyncTrack if not present
+    chartContent = chartContent.replace(/(\[SyncTrack\]\s*\{\s*)(0 = B \d+)/g, '$1  0 = TS 4\n  $2');
+    
+    // Fix TS 4 formatting - ensure proper indentation
+    chartContent = chartContent.replace(/\[SyncTrack\]\s*\{\s*0 = TS 4\s*\n\s*0 = B \d+/g, (match) => {
+      return match.replace(/0 = TS 4\s*\n\s*0 = B/, '  0 = TS 4\n  0 = B');
+    });
+    
+    // Remove duplicate events at the same tick
+    chartContent = chartContent.replace(/\[Events\]\s*\{([^}]*)\}/gs, (match, content) => {
+      const lines = content.split('\n').filter(line => line.trim());
+      const eventMap = new Map();
+      
+      lines.forEach(line => {
+        const eventMatch = line.match(/(\d+)\s*=\s*E\s+"([^"]+)"/);
+        if (eventMatch) {
+          const tick = eventMatch[1];
+          const event = eventMatch[2];
+          if (!eventMap.has(tick)) {
+            eventMap.set(tick, event);
+          }
+        }
+      });
+      
+      const uniqueEvents = Array.from(eventMap.entries())
+        .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
+        .map(([tick, event]) => `  ${tick} = E "${event}"`)
+        .join('\n');
+      
+      return `[Events]\n{\n${uniqueEvents}\n}`;
+    });
+    
+    // Remove unnecessary blank lines inside sections
+    chartContent = chartContent.replace(/\{\s*\n\s*\n/g, '{\n');
+    chartContent = chartContent.replace(/\n\s*\n\s*\}/g, '\n}');
+    
+    // Clean up multiple consecutive blank lines
+    chartContent = chartContent.replace(/\n\s*\n\s*\n/g, '\n\n');
+    
+    // Remove blank lines between note entries
+    chartContent = chartContent.replace(/(\d+ = N \d+ \d+)\s*\n\s*\n(\d+ = N \d+ \d+)/g, '$1\n$2');
+    
+    // Verify and fix balanced braces
+    chartContent = chartContent.replace(/\{\s*\n\s*\}/g, '{\n}');
+    
+    // Final cleanup - ensure proper spacing between sections
+    chartContent = chartContent.replace(/\}\s*\n\s*\[/g, '}\n\n[');
+    chartContent = chartContent.replace(/\}\s*\[/g, '}\n\n[');
+    
+    // Add newline before [SyncTrack] - handle both with and without existing newlines
+    chartContent = chartContent.replace(/(\[Song\]\s*\{[^}]*\})\s*(\[SyncTrack\])/g, '$1\n\n$2');
+    chartContent = chartContent.replace(/(\[Song\]\s*\{[^}]*\})\n(\[SyncTrack\])/g, '$1\n\n$2');
+    
+    // Ensure newlines between all major sections
+    chartContent = chartContent.replace(/(\[SyncTrack\]\s*\{[^}]*\})\s*(\[Events\])/g, '$1\n\n$2');
+    chartContent = chartContent.replace(/(\[Events\]\s*\{[^}]*\})\s*(\[ExpertSingle\])/g, '$1\n\n$2');
+    chartContent = chartContent.replace(/(\[ExpertSingle\]\s*\{[^}]*\})\s*(\[ExpertDoubleBass\])/g, '$1\n\n$2');
+    chartContent = chartContent.replace(/(\[ExpertDoubleBass\]\s*\{[^}]*\})\s*(\[HardSingle\])/g, '$1\n\n$2');
+    chartContent = chartContent.replace(/(\[HardSingle\]\s*\{[^}]*\})\s*(\[MediumSingle\])/g, '$1\n\n$2');
+    chartContent = chartContent.replace(/(\[MediumSingle\]\s*\{[^}]*\})\s*(\[EasySingle\])/g, '$1\n\n$2');
+    
+    // Fix SyncTrack formatting - ensure proper indentation
+    chartContent = chartContent.replace(/\[SyncTrack\]\s*\{\s*0 = TS 4\s*\n\s*0 = B \d+/g, (match) => {
+      return match.replace(/0 = TS 4\s*\n\s*0 = B/, '  0 = TS 4\n  0 = B');
+    });
+    
+    // Change event names to use underscores
+    chartContent = chartContent.replace(/E\s+"([^"]*)\s+(\d+)"/g, 'E "$1_$2"');
+    chartContent = chartContent.replace(/E\s+"([^"]*)\s+(\d+)\s+([^"]*)"/g, 'E "$1_$2_$3"');
+    
+    // Sort notes strictly ascending by tick in all difficulty sections
+    chartContent = chartContent.replace(/\[(ExpertSingle|HardSingle|MediumSingle|EasySingle|ExpertDoubleBass)\]\s*\{([^}]*)\}/gs, (match, sectionName, content) => {
+      const lines = content.split('\n').filter(line => line.trim());
+      const noteLines = [];
+      const otherLines = [];
+      
+      lines.forEach(line => {
+        if (line.match(/\d+\s*=\s*N\s+\d+\s+\d+/)) {
+          noteLines.push(line);
+        } else {
+          otherLines.push(line);
+        }
+      });
+      
+      // Sort notes by tick value (extract first number from each line)
+      noteLines.sort((a, b) => {
+        const matchA = a.match(/^(\d+)/);
+        const matchB = b.match(/^(\d+)/);
+        if (!matchA || !matchB) return 0;
+        const tickA = parseInt(matchA[1]);
+        const tickB = parseInt(matchB[1]);
+        return tickA - tickB;
+      });
+      
+      const sortedContent = [...otherLines, ...noteLines].join('\n');
+      return `[${sectionName}]\n{\n${sortedContent}\n}`;
+    });
+    
+    // Add some sustain notes with nonzero length (every 10th note gets sustain)
+    chartContent = chartContent.replace(/(\d+ = N \d+) 0/g, (match, notePart, offset) => {
+      const noteNumber = parseInt(notePart.match(/(\d+)/)[1]);
+      if (noteNumber % 10 === 0) {
+        return `${notePart} 192`;
+      }
+      return match;
+    });
+    
+    // Clean up any remaining formatting issues
+    chartContent = chartContent.replace(/\n\s*\n\s*\n/g, '\n\n');
+    
+    // Final fix: ensure newlines between all sections (run this last)
+    chartContent = chartContent.replace(/\}\s*\[/g, '}\n\n[');
+    chartContent = chartContent.replace(/\}\[([A-Z])/g, '}\n\n[$1');
+    
+    // Fix [Song] section format - add curly braces and quote string values
+    chartContent = chartContent.replace(/\[Song\]\s*\n([^[]*?)(?=\[|$)/gs, (match, content) => {
+      // Skip if already has curly braces
+      if (content.includes('{') && content.includes('}')) {
+        return match;
+      }
+      const lines = content.trim().split('\n').filter(line => line.trim());
+      const formattedLines = lines.map(line => {
+        if (line.includes('=')) {
+          const [key, value] = line.split('=').map(s => s.trim());
+          if (key === 'Name' || key === 'Artist' || key === 'Charter' || key === 'Genre' || key === 'MediaType' || key === 'MusicStream') {
+            return `  ${key} = "${value}"`;
+          } else {
+            return `  ${key} = ${value}`;
+          }
+        }
+        return line;
+      });
+      return `[Song]\n{\n${formattedLines.join('\n')}\n}`;
+    });
+    
+    // Fix [SyncTrack] section format - add curly braces and proper BPM format
+    chartContent = chartContent.replace(/\[SyncTrack\]\s*\n([^[]*?)(?=\[|$)/gs, (match, content) => {
+      // Skip if already has curly braces
+      if (content.includes('{') && content.includes('}')) {
+        return match;
+      }
+      const lines = content.trim().split('\n').filter(line => line.trim());
+      const formattedLines = lines.map(line => {
+        if (line.includes('B ')) {
+          // Convert BPM to microseconds per quarter note: 60000000 / BPM
+          const bpmMatch = line.match(/B\s+([\d.]+)/);
+          if (bpmMatch) {
+            const bpm = parseFloat(bpmMatch[1]);
+            const microseconds = Math.round(60000000 / bpm);
+            return `  0 = B ${microseconds}`;
+          }
+        }
+        if (line.includes('=')) {
+          return `  ${line}`;
+        }
+        return line;
+      });
+      // Add TS entry if not present
+      if (!content.includes('TS')) {
+        formattedLines.unshift('  0 = TS 4');
+      }
+      return `[SyncTrack]\n{\n${formattedLines.join('\n')}\n}`;
+    });
+    
+    // Fix [Events] section format - add curly braces and proper tick format
+    chartContent = chartContent.replace(/\[Events\]\s*\n([^[]*?)(?=\[|$)/gs, (match, content) => {
+      // Skip if already has curly braces
+      if (content.includes('{') && content.includes('}')) {
+        return match;
+      }
+      const lines = content.trim().split('\n').filter(line => line.trim());
+      const formattedLines = lines.map(line => {
+        if (line.includes('E ')) {
+          // Convert "E tick "event"" to "tick = E "event""
+          const eventMatch = line.match(/E\s+(\d+)\s+"([^"]+)"/);
+          if (eventMatch) {
+            const tick = eventMatch[1];
+            const event = eventMatch[2];
+            return `  ${tick} = E "${event}"`;
+          }
+        }
+        if (line.includes('=')) {
+          return `  ${line}`;
+        }
+        return line;
+      });
+      return `[Events]\n{\n${formattedLines.join('\n')}\n}`;
+    });
+    
+    // Fix difficulty sections format - add curly braces
+    chartContent = chartContent.replace(/\[(ExpertSingle|HardSingle|MediumSingle|EasySingle|ExpertDoubleBass)\]\s*\n([^[]*?)(?=\[|$)/gs, (match, sectionName, content) => {
+      // Skip if already has curly braces
+      if (content.includes('{') && content.includes('}')) {
+        return match;
+      }
+      const lines = content.trim().split('\n').filter(line => line.trim());
+      const formattedLines = lines.map(line => {
+        if (line.includes('=')) {
+          return `  ${line}`;
+        }
+        return line;
+      });
+      return `[${sectionName}]\n{\n${formattedLines.join('\n')}\n}`;
+    });
+    
+    // Final newline fix - ensure proper spacing between all sections
+    chartContent = chartContent.replace(/\}\[([A-Z])/g, '}\n\n[$1');
     
     console.log('Generated chart for', songName);
     
@@ -650,7 +887,11 @@ function generateSampleNotes() {
 
 // Routes
 app.get('/', (req, res) => {
-  res.json({ message: 'Guitar Super Power Backend API' });
+  res.status(200).send("received");
+});
+
+app.post('/', (req, res) => {
+  res.json({message: "a"});
 });
 
 // Generate chart from song name only

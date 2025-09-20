@@ -82,16 +82,6 @@ export const ResultsScreen: React.FC = () => {
               </span>
             </div>
             
-            {/* Health Status */}
-            <div className="flex justify-between items-center">
-              <span className="text-pixel-white text-lg">HEALTH</span>
-              <span className={`text-xl font-bold ${
-                gameplay.healthP1 > 50 ? 'text-green-400' : 
-                gameplay.healthP1 > 25 ? 'text-yellow-400' : 'text-red-400'
-              }`}>
-                {gameplay.healthP1}%
-              </span>
-            </div>
           </div>
         </div>
         

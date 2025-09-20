@@ -34,8 +34,6 @@ export interface Gameplay {
   comboP2: number;
   accuracyP1: number;
   accuracyP2: number;
-  healthP1: number;
-  healthP2: number;
   gameOver: boolean;
 }
 
@@ -90,8 +88,6 @@ export const useGameStore = create<GameState>((set, get) => ({
     comboP2: 0,
     accuracyP1: 100,
     accuracyP2: 100,
-    healthP1: 100,
-    healthP2: 100,
     gameOver: false,
   },
 
@@ -249,8 +245,6 @@ export const useGameStore = create<GameState>((set, get) => ({
         comboP2: 0,
         accuracyP1: 100,
         accuracyP2: 100,
-        healthP1: 100,
-        healthP2: 100,
         gameOver: false,
       },
     }),

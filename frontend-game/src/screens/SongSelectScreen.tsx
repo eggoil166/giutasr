@@ -258,7 +258,7 @@ export const SongSelectScreen: React.FC = () => {
         {/* Title */}
         <div className="text-center mb-8">
           <h1 className="retro-title text-4xl mb-2 pixel-glow-pink">SONG SELECT</h1>
-          <p className="pixel-glow-purple">Choose your track and fighter</p>
+          <p className="pixel-glow-purple">Choose your song</p>
         </div>
         
         {/* Main Content */}
@@ -267,7 +267,7 @@ export const SongSelectScreen: React.FC = () => {
           <div className="flex-shrink-0 w-80">
             <div className={`pixel-panel p-6 ${focusMode === 'character' ? 'highlighted' : ''}`}>
               <h2 className="text-lg pixel-glow-purple mb-6">
-                FIGHTER {focusMode === 'character' && <span className="pixel-glow-pink">[ACTIVE]</span>}
+                Character {focusMode === 'character' && <span className="pixel-glow-pink">[ACTIVE]</span>}
               </h2>
               
               {/* Player 1 Character */}

@@ -1,4 +1,3 @@
-// SpaceTimeDB wrapper copied from beatbox client and adapted path
 import { DbConnection, type ErrorContext, type EventContext, type Lobby } from '../module_bindings';
 
 export type SpacetimeState = {
@@ -86,8 +85,6 @@ export const LobbyApi = {
   create(conn: DbConnection, code: string) { (conn as any).reducers.createLobby(code); },
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   join(conn: DbConnection, code: string) { (conn as any).reducers.joinLobby(code); },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  increment(conn: DbConnection, code: string) { (conn as any).reducers.increment(code); },
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   setCharacter(conn: DbConnection, code: string, character: string) { (conn as any).reducers.setCharacter?.(code, character); },
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

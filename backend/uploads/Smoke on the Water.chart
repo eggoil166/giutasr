@@ -1,0 +1,126 @@
+[Song]
+Name = Smoke on the Water
+Artist = Deep Purple
+Charter = Gemini
+Offset = 0
+Resolution = 192
+Player2 = bass
+Genre = Hard Rock
+MediaType = CD
+MusicStream = Smoke on the Water.mp3
+
+[SyncTrack]
+{
+  B 116.000
+}
+
+[Events]
+{
+  E 0 "intro"
+  E 30000 "verse 1"
+  E 60000 "chorus 1"
+  E 90000 "verse 2"
+  E 120000 "chorus 2"
+  E 150000 "bridge"
+  E 180000 "guitar solo"
+  E 240000 "chorus 3"
+  E 270000 "outro"
+}
+
+[ExpertSingle]
+{
+N 0 0
+N 192 1
+N 384 0
+N 576 3
+N 768 0
+N 960 1
+N 1152 0
+N 1344 2
+N 1536 0
+N 1728 1
+N 1920 0
+N 2112 3
+
+
+N 47040 0
+N 47232 1
+N 47424 0
+N 47616 3
+N 47808 0
+N 48000 1
+N 48192 0
+N 48384 2
+N 48576 0
+N 48768 1
+N 48960 0
+N 49152 3
+N 49344 0
+N 49536 1
+N 49728 0
+N 49920 3
+
+N 307200 0
+N 307392 1
+N 307584 0
+
+}
+
+
+[ExpertDoubleBass]
+{
+N 0 0
+N 192 1
+N 384 0
+N 576 3
+N 768 0
+N 960 1
+N 1152 0
+N 1344 2
+N 1536 0
+N 1728 1
+N 1920 0
+N 2112 3
+N 307200 0
+N 307392 1
+N 307584 0
+}
+
+[HardSingle]
+{
+N 0 0
+N 384 1
+N 768 0
+N 1152 3
+N 1536 0
+N 1920 1
+N 2304 0
+N 2688 2
+N 307200 0
+N 307392 1
+N 307584 0
+}
+
+[MediumSingle]
+{
+N 0 0
+N 768 1
+N 1536 0
+N 2304 3
+N 307200 0
+N 307392 1
+N 307584 0
+
+}
+
+[EasySingle]
+{
+N 0 0
+N 1536 1
+N 3072 0
+N 4608 3
+
+N 307200 0
+N 307392 1
+N 307584 0
+}

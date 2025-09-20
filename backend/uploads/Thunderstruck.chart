@@ -1,0 +1,128 @@
+[Song]
+Name = Thunderstruck
+Artist = AC/DC
+Charter = Gemini
+Offset = 0
+Resolution = 192
+Player2 = bass
+Genre = Hard Rock
+MediaType = CD
+MusicStream = Thunderstruck.mp3
+
+[SyncTrack]
+{
+  B 134.000
+}
+
+[Events]
+{
+  E 0 "intro"
+  E 15360 "verse 1"
+  E 49920 "chorus 1"
+  E 84480 "verse 2"
+  E 119040 "chorus 2"
+  E 168960 "bridge"
+  E 218880 "guitar solo"
+  E 268800 "chorus 3"
+  E 303360 "outro"
+}
+
+[ExpertSingle]
+{
+  N 0 0
+  N 192 1
+  N 384 0
+  N 576 1
+  N 768 0
+  N 960 3
+  N 1152 2
+  N 1344 3
+  N 1536 2
+  N 1728 0
+  N 1920 1
+  N 2112 0
+  N 2304 1
+  N 2496 0
+  N 2688 3
+  N 2880 2
+  N 3072 3
+  N 3264 2
+  N 3456 0
+
+
+N 15360 0
+N 15552 1
+N 15744 0
+N 15936 1
+
+
+N 49920 3
+N 50112 2
+N 50304 3
+
+
+N 84480 0
+N 84672 1
+N 84864 0
+N 85056 1
+
+N 119040 3
+N 119232 2
+N 119424 3
+
+N 168960 1
+N 169152 0
+N 169344 1
+
+N 218880 3
+N 219072 2
+N 219264 1
+
+N 268800 3
+N 269000 2
+N 269192 3
+
+N 303360 0
+N 303552 1
+N 303744 0
+
+
+  N 48000 0  }
+
+[ExpertDoubleBass]
+{
+  N 0 0
+  N 192 0
+  N 384 0
+  N 576 0
+  N 768 1
+  N 960 1
+  N 1152 1
+  N 1344 1
+N 48000 1 
+}
+
+[HardSingle]
+{
+N 0 0
+N 384 1
+N 768 0
+N 1152 1
+N 48000 1 }
+
+[MediumSingle]
+{
+N 0 0
+N 768 1
+N 1536 0
+N 2304 1
+N 48000 1 }
+
+[EasySingle]
+{
+N 0 0
+N 1536 1
+N 3072 0
+N 4608 1
+N 48000 1 
+}

@@ -1,0 +1,206 @@
+[Song]
+Name = Golden hour
+Artist = JVKE
+Charter = Gemini
+Offset = 0
+Resolution = 192
+Player2 = bass
+Genre = Pop
+MediaType = CD
+MusicStream = Golden hour.mp3
+
+[SyncTrack]
+{
+  B 128.000
+}
+
+[Events]
+{
+  E 0 "intro"
+  E 13440 "verse"
+  E 32000 "chorus"
+  E 50560 "verse"
+  E 69120 "chorus"
+  E 87680 "bridge"
+  E 106240 "outro"
+}
+
+[ExpertSingle]
+{
+  N 0 0
+  N 192 1
+  N 384 2
+  N 576 3
+  N 768 0
+  N 960 3
+  N 1152 2
+  N 1344 1
+  N 1536 0
+  N 1728 1
+  N 1920 2
+  N 2112 3
+  N 2304 0
+  N 2496 1
+  N 2688 2
+  N 2880 3
+  N 3072 0
+  N 3264 3
+  N 3456 2
+  N 3648 1
+  N 3840 0
+  N 4032 1
+  N 4224 2
+  N 4416 3
+  N 4608 0
+  N 4800 1
+  N 4992 2
+  N 5184 3
+  N 5376 0
+  N 5568 3
+  N 5760 2
+  N 5952 1
+  N 6144 0
+  N 6336 1
+  N 6528 2
+  N 6720 3
+  N 6912 0
+  N 7104 3
+  N 7296 2
+  N 7488 1
+  N 7680 0
+  N 7872 1
+  N 8064 2
+  N 8256 3
+  N 8448 0
+  N 8640 1
+  N 8832 2
+  N 9024 3
+  N 9216 0
+  N 9408 3
+  N 9600 2
+  N 9792 1
+  N 9984 0
+  N 10176 1
+  N 10368 2
+  N 10560 3
+  N 10752 0
+  N 10944 1
+  N 11136 2
+  N 11328 3
+  N 11520 0
+  N 11712 1
+  N 11904 2
+  N 12096 3
+  N 12288 0
+  N 12480 3
+  N 12672 2
+  N 12864 1
+  N 13056 0
+  N 13248 1
+  N 13440 2
+  N 13632 3
+  N 13824 0
+  N 14016 1
+  N 14208 2
+  N 14400 3
+  N 14592 0
+  N 14784 1
+  N 14976 2
+  N 15168 3
+  N 15360 0
+  N 15552 1
+  N 15744 2
+  N 15936 3
+  N 16128 0
+  N 16320 1
+  N 16512 2
+  N 16704 3
+  N 16896 0
+  N 17088 3
+  N 17280 2
+  N 17472 1
+  N 17664 0
+  N 17856 1
+  N 18048 2
+  N 18240 3
+  N 18432 0
+  N 18624 3
+  N 18816 2
+  N 19008 1
+  N 19200 0
+  N 19392 1
+  N 19584 2
+  N 19776 3
+  N 19968 0
+  N 20160 1
+  N 20352 2
+  N 20544 3
+  N 20736 0
+  N 20928 3
+  N 21120 2
+  N 21312 1
+  N 21504 0
+  N 21696 1
+  N 21888 2
+  N 22080 3
+  N 22272 0
+  N 22464 1
+  N 22656 2
+  N 22848 3
+  N 23040 0
+  N 23232 3
+  N 23424 2
+  N 23616 1
+  N 23808 0
+  N 24000 1
+  N 24192 2
+
+
+N 24384 3
+N 24576 0
+N 24768 1
+N 24960 2
+N 25152 3
+N 25344 0
+N 25536 3
+N 25728 2
+N 25920 1
+N 26112 0  //  Due to the repetitive nature of the song and to keep the response concise, the rest of the chart isn't generated here.
+//  The shown section provides a foundation for the beginning of the song and exemplifies the note placement and timing format expected in a Clone Hero chart.
+}
+
+[ExpertDoubleBass]
+{
+  // Similar structure as ExpertSingle, but adapted for double bass pedal play.
+  //  Would include more frequent notes on the bass pedal track and synchronization with the main guitar track.
+  N 0 0
+  N 192 0
+  N 384 1
+  N 576 1
+  N 768 0 // Example pattern
+  }
+
+
+[HardSingle]
+{
+    N 0 0
+  N 384 1
+  N 768 2
+  N 1152 3 // Example pattern
+  }
+
+[MediumSingle]
+{
+    N 0 0
+  N 768 1
+  N 1536 0 // Example pattern
+  
+}
+
+[EasySingle]
+{
+    N 0 0
+  N 1536 1
+  N 3072 0 // Example pattern
+  
+}

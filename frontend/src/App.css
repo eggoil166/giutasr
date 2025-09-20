@@ -30,7 +30,7 @@
   padding: 2rem;
 }
 
-.upload-section, .charts-section, .info-section {
+.song-form-section, .charts-section, .info-section {
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
   border-radius: 20px;
@@ -39,19 +39,75 @@
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.upload-section h2, .charts-section h2, .info-section h2 {
+.song-form-section h2, .charts-section h2, .info-section h2 {
   margin-top: 0;
   font-size: 1.8rem;
   text-align: center;
   margin-bottom: 1.5rem;
 }
 
-.upload-area {
-  text-align: center;
+.form-container {
+  max-width: 600px;
+  margin: 0 auto;
 }
 
-.upload-button {
-  background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 1rem;
+  backdrop-filter: blur(5px);
+  transition: all 0.3s ease;
+}
+
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #4CAF50;
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+}
+
+.form-group input:disabled,
+.form-group textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.form-help {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-style: italic;
+}
+
+.generate-button {
+  background: linear-gradient(45deg, #4CAF50, #45a049);
   color: white;
   border: none;
   padding: 1rem 2rem;
@@ -61,14 +117,16 @@
   transition: all 0.3s ease;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
   font-weight: 600;
+  width: 100%;
+  margin-top: 1rem;
 }
 
-.upload-button:hover:not(:disabled) {
+.generate-button:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
 }
 
-.upload-button:disabled {
+.generate-button:disabled {
   opacity: 0.7;
   cursor: not-allowed;
 }

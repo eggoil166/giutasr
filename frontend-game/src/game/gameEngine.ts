@@ -1,14 +1,16 @@
+import * as THREE from 'three';
+
 export interface Note {
   id: string;
-  lane: 0 | 1 | 2 | 3; // 4 lanes: Green, Red, Yellow, Blue
+  lane: 0 | 1 | 2 | 3;
   type: 'note';
   time: number;
   y: number;
   hit: boolean;
-  glowIntensity: number; // For glow effect when hit
-  glowTime: number; // How long the glow lasts
-  holdDuration?: number; // sustain length (ms)
-  holdHeadHitTime?: number; // actual time head was hit
+  glowIntensity: number;
+  glowTime: number;
+  holdDuration?: number;
+  holdHeadHitTime?: number;
   releasedEarly?: boolean;
 }
 
@@ -29,18 +31,39 @@ export class GameEngine {
   private rafId: number | null = null;
   private running = false;
   
-  // Game constants
-  private readonly NOTE_SPEED = 150; // pixels per second
+  private threeEnabled = true;
+  private renderer: THREE.WebGLRenderer | null = null;
+  private threeCanvas: HTMLCanvasElement | null = null;
+  private scene: THREE.Scene | null = null;
+  private camera: THREE.PerspectiveCamera | null = null;
+  private playfield: THREE.Group | null = null;
+  private ringMeshes: THREE.Mesh[] = [];
+  private ringGlowMeshes: THREE.Mesh[] = [];
+  private noteHaloMeshes = new Map<string, THREE.Mesh>();
+  private noteTailMeshes = new Map<string, THREE.Mesh>();
+  private ringGlow: number[] = [0, 0, 0, 0];
+  private ringBaseColors: number[] = [0x00ff00, 0xff0000, 0xffff00, 0x0066ff];
+  private noteHitGlow = new Map<string, number>();
+  private noteGeometry: THREE.BufferGeometry | null = null;
+  private noteMaterials: THREE.MeshStandardMaterial[] = [];
+  private noteHaloMaterial: THREE.MeshBasicMaterial | null = null;
+  private tailGeometry: THREE.BoxGeometry | null = null;
+  private tailMaterials: THREE.MeshStandardMaterial[] = [];
+  private noteMeshes = new Map<string, THREE.Mesh>();
+  private readonly LANE_POSITIONS_3D = [-3, -1, 1, 3];
+  private readonly HIT_PLANE_Y = -5.0;
+  private readonly Z_PER_MS = 0.02;
+  private readonly RING_BASE_EMISSIVE = 0.25;
+  
+  private readonly NOTE_SPEED = 150;
   private readonly HIT_LINE_Y = 400;
-  private readonly LANE_POSITIONS = [120, 200, 280, 360]; // 4 lanes
+  private readonly LANE_POSITIONS = [120, 200, 280, 360];
   private readonly NOTE_SIZE = 25;
   
-  // Hit target + visual glow arrays
   private readonly HIT_TARGET_SIZE = 30;
   private hitTargetGlow: number[] = [0, 0, 0, 0];
   private hitTargetGlowTime: number[] = [0, 0, 0, 0];
 
-  // Chase mechanics
   private bearProgress = 10.0;
   private manProgress = 0.0;
   private readonly MAN_CHASE_SPEED = 0.2;
@@ -49,40 +72,12 @@ export class GameEngine {
   private gameOver = false;
   private gameResult: 'bear_escaped' | 'man_caught' | null = null;
 
-  // Spacebar mechanics
   private spacebarPressed = false;
   private spacebarBoostMultiplier = 1.0;
 
-  // Timing windows
-  private readonly PERFECT_WINDOW = 15;
-  private readonly GREAT_WINDOW = 30;
+  private readonly PERFECT_WINDOW = 25;
+  private readonly GREAT_WINDOW = 55;
   private readonly GOOD_WINDOW = 140;
-
-  // 3D disabled placeholder flag (some code checks it)
-  private threeEnabled = false;
-  // 3D placeholders
-  private renderer?: any;
-  private scene?: any;
-  private camera?: any;
-  private playfield?: any;
-  private threeCanvas?: HTMLCanvasElement;
-  private readonly LANE_POSITIONS_3D = [-2.2, -0.75, 0.75, 2.2];
-  private readonly HIT_PLANE_Y = 0;
-  private readonly Z_PER_MS = 0.05;
-  private noteGeometry?: any;
-  private noteMaterials: any[] = [];
-  private tailGeometry?: any;
-  private tailMaterials: any[] = [];
-  private noteMeshes = new Map<string, any>();
-  private noteHaloMaterial?: any;
-  private noteHaloMeshes = new Map<string, any>();
-  private noteTailMeshes = new Map<string, any>();
-  private noteHitGlow = new Map<string, number>();
-  private ringMeshes: any[] = [undefined, undefined, undefined, undefined];
-  private ringGlowMeshes: any[] = [undefined, undefined, undefined, undefined];
-  private ringGlow: number[] = [0,0,0,0];
-  private readonly RING_BASE_EMISSIVE = 0.6;
-  private ringBaseColors = [0x00ff00, 0xff0000, 0xffff00, 0x0066ff];
 
   private totalNotes = 0;
   private perfectHits = 0;
@@ -98,7 +93,9 @@ export class GameEngine {
     this.gainNode = gainNode;
     this.setupSpacebarDetection();
 
-  // Leave 3D off unless explicitly enabled later
+    if (this.threeEnabled) {
+      this.initThree();
+    }
   }
   
   private setupSpacebarDetection() {
@@ -211,17 +208,7 @@ export class GameEngine {
   }
   
   private playMusic(songId: string) {
-    const basePath = `/songs/${songId}/song`;
-    this.audioElement = new Audio(`${basePath}.ogg`);
-    const tryMp4 = () => {
-      if (this.audioElement && !this.audioElement.src.endsWith('.mp4')) {
-        this.audioElement.removeEventListener('error', tryMp4);
-        this.audioElement.src = `${basePath}.mp4`;
-        this.audioElement.load();
-        this.audioElement.play().catch(err => console.warn('Music mp4 playback failed', err));
-      }
-    };
-    this.audioElement.addEventListener('error', tryMp4, { once: true });
+    this.audioElement = new Audio(`/songs/${songId}/song.ogg`);
     this.audioElement.volume = 1; // use gainNode for master volume control
     
     // Connect to Web Audio API
@@ -903,14 +890,131 @@ export class GameEngine {
        spacebarBoostMultiplier: this.spacebarBoostMultiplier
     };
   }
+  
+  pause() {
+    if (this.audioElement) {
+      this.audioElement.pause();
+      console.log('MusicPause', { currentTime: this.audioElement.currentTime });
+    }
+  }
+  
+  resume() {
+    if (this.audioElement) {
+      this.audioElement.play();
+    }
+  }
 
   stop() {
-    if (!this.running) return;
+    // Stop RAF loop
     this.running = false;
-    if (this.rafId) cancelAnimationFrame(this.rafId);
-    this.rafId = null;
+    if (this.rafId !== null) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = null;
+    }
+    // Stop and reset audio
     if (this.audioElement) {
-      try { this.audioElement.pause(); } catch { /* ignore */ }
+      try {
+        this.audioElement.pause();
+        this.audioElement.currentTime = 0;
+      } catch (e) {
+        console.warn('AudioStopError', e);
+      }
+    }
+    // Dispose 3D resources
+    if (this.threeEnabled) {
+      this.disposeThree();
+    }
+  }
+  
+  getCurrentTime(): number {
+    return this.currentTime;
+  }
+  
+  getActiveNotes(): Note[] {
+    return this.notes.filter(note => !note.hit && note.y > -50 && note.y < this.canvas.height + 50);
+  }
+  
+  setVolume(volume: number) {
+    this.gainNode.gain.value = volume;
+  }
+
+  handleRelease(lane: 0|1|2|3) {
+    const now = this.currentTime;
+    // Find active sustain in this lane (head already hit, sustain not finished)
+    const active = this.notes.find(n => n.lane === lane && n.holdDuration && n.holdHeadHitTime !== undefined && !n.releasedEarly && now < (n.holdHeadHitTime + n.holdDuration));
+    if (active) {
+      active.releasedEarly = true;
+      // Penalize as a miss for sustain tail
+      this.missedHits++;
+    }
+  }
+
+  private disposeThree() {
+    try {
+      // Remove note meshes
+      for (const [, mesh] of this.noteMeshes) {
+        this.scene?.remove(mesh);
+      }
+      this.noteMeshes.clear();
+      for (const [, halo] of this.noteHaloMeshes) {
+        this.scene?.remove(halo);
+      }
+      this.noteHaloMeshes.clear();
+      for (const [, tail] of this.noteTailMeshes) {
+        this.scene?.remove(tail);
+      }
+      this.noteTailMeshes.clear();
+      
+      // Dispose scene objects (geometries/materials)
+      if (this.scene) {
+        this.scene.traverse((obj: THREE.Object3D) => {
+          if (obj instanceof THREE.Mesh) {
+            const geometry = obj.geometry as THREE.BufferGeometry | undefined;
+            const material = obj.material as THREE.Material | THREE.Material[] | undefined;
+            if (geometry) geometry.dispose();
+            if (material) {
+              if (Array.isArray(material)) (material as THREE.Material[]).forEach((m: THREE.Material) => m.dispose());
+              else material.dispose();
+            }
+          }
+        });
+      }
+
+      // Dispose shared note resources
+      this.noteMaterials.forEach(m => m.dispose());
+      this.noteMaterials = [];
+      if (this.noteGeometry) {
+        this.noteGeometry.dispose();
+        this.noteGeometry = null;
+      }
+      if (this.noteHaloMaterial) {
+        this.noteHaloMaterial.dispose();
+        this.noteHaloMaterial = null;
+      }
+      if (this.tailGeometry) {
+        this.tailGeometry.dispose();
+        this.tailGeometry = null;
+      }
+      this.tailMaterials.forEach(m => m.dispose());
+      this.tailMaterials = [];
+
+      // Dispose renderer
+      if (this.renderer) {
+        this.renderer.dispose();
+      }
+
+      // Remove WebGL canvas
+      if (this.threeCanvas && this.threeCanvas.parentElement) {
+        this.threeCanvas.parentElement.removeChild(this.threeCanvas);
+      }
+
+      // Null references
+      this.renderer = null;
+      this.scene = null;
+      this.camera = null;
+      this.threeCanvas = null;
+    } catch (e) {
+      console.warn('ThreeDisposeFailed', e);
     }
   }
 }

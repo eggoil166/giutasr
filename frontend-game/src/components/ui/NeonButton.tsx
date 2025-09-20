@@ -21,7 +21,7 @@ export const NeonButton: React.FC<NeonButtonProps> = ({
   
   const variantClasses = {
     primary: disabled ? '' : 'hover:border-pixel-pink hover:text-pixel-pink',
-    secondary: disabled ? '' : 'hover:border-pixel-purple hover:text-pixel-purple',
+    secondary: disabled ? '' : 'hover:border-pixel-pink hover:text-pixel-pink',
     accent: disabled ? '' : 'hover:border-pixel-pink hover:text-pixel-pink selected',
   };
   

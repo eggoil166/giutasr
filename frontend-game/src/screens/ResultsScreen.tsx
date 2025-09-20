@@ -33,29 +33,36 @@ export const ResultsScreen: React.FC = () => {
   const maxCombo = Math.max(gameplay.comboP1, gameplay.comboP2);
   const avgAccuracy = (gameplay.accuracyP1 + gameplay.accuracyP2) / 2;
   
-  const getRank = (accuracy: number) => {
-    if (accuracy >= 95) return { rank: 'S', color: 'pixel-glow-pink' };
-    if (accuracy >= 85) return { rank: 'A', color: 'text-yellow-400' };
-    if (accuracy >= 75) return { rank: 'B', color: 'text-green-400' };
-    if (accuracy >= 65) return { rank: 'C', color: 'text-blue-400' };
-    return { rank: 'D', color: 'text-red-400' };
+  const getStars = (accuracy: number) => {
+    if (accuracy >= 95) return 5;
+    if (accuracy >= 85) return 4;
+    if (accuracy >= 75) return 3;
+    if (accuracy >= 65) return 2;
+    if (accuracy >= 50) return 1;
+    return 0;
   };
-  
-  const rankInfo = getRank(avgAccuracy);
+  const stars = getStars(avgAccuracy);
   
   return (
-    <div className="min-h-screen pixel-bg flex flex-col items-center justify-center relative">
-      <div className="scanlines"></div>
+    <div className="min-h-screen flex flex-col items-center justify-center relative">
       
       <div className="game-container">
         {/* Title */}
         <div className="text-center mb-12">
-          <h1 className="retro-title text-5xl mb-4 pixel-glow-pink">
+          <h1 className="retro-title text-5xl mb-6 pixel-glow-pink">
             {gameplay.outcome === 'bear_escaped' ? 'BEAR ESCAPED' : gameplay.outcome === 'man_caught' ? 'MAN CAUGHT THE BEAR' : 'RESULTS'}
           </h1>
-          <div className={`text-8xl font-black mb-4 ${rankInfo.color}`}>
-            {rankInfo.rank}
+          <div className="flex justify-center items-center gap-4 mb-4">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <span key={i} className="inline-block mx-2">
+                <i
+                  className={`nes-icon star is-large ${i < stars ? '' : 'is-empty'}`}
+                  aria-hidden="true"
+                />
+              </span>
+            ))}
           </div>
+          <div className="text-sm text-pixel-gray">ACCURACY {avgAccuracy.toFixed(1)}%</div>
         </div>
         
         {/* Stats */}
@@ -63,21 +70,21 @@ export const ResultsScreen: React.FC = () => {
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <span className="text-pixel-white text-lg">SCORE</span>
-              <span className="pixel-glow-purple text-xl font-bold">
+              <span className="pixel-glow-purple text-xl">
                 {totalScore.toLocaleString()}
               </span>
             </div>
             
             <div className="flex justify-between items-center">
               <span className="text-pixel-white text-lg">MAX COMBO</span>
-              <span className="pixel-glow-pink text-xl font-bold">
+              <span className="pixel-glow-pink text-xl">
                 {maxCombo}X
               </span>
             </div>
             
             <div className="flex justify-between items-center">
               <span className="text-pixel-white text-lg">ACCURACY</span>
-              <span className="pixel-glow-pink text-xl font-bold">
+              <span className="pixel-glow-pink text-xl">
                 {avgAccuracy.toFixed(1)}%
               </span>
             </div>

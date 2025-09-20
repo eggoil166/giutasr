@@ -17,8 +17,7 @@ export const TitleScreen: React.FC = () => {
   }, [setScreen]);
   
   return (
-    <div className="min-h-screen pixel-bg flex flex-col items-center justify-center relative">
-      <div className="scanlines"></div>
+    <div className="min-h-screen flex flex-col items-center justify-center relative">
       
       <div className="game-container text-center">
         {/* Main Title */}

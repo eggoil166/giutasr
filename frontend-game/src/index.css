@@ -2,18 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 @import url('https://fonts.cdnfonts.com/css/minecraftia');
 
 /* Global pixel font */
 * {
-  font-family: 'Minecraftia', 'Press Start 2P', monospace;
+  font-family: 'Minecraftia', monospace;
   font-weight: 700;
   image-rendering: pixelated;
   image-rendering: -moz-crisp-edges;
   image-rendering: crisp-edges;
 }
-
+h
 /* Pixel-perfect rendering */
 canvas, img, video {
   image-rendering: pixelated;
@@ -76,8 +75,8 @@ body {
   position: absolute;
   inset: 0;
   background: 
-    radial-gradient(circle at 20% 20%, rgba(255, 0, 255, 0.1) 0%, transparent 50%),
-    radial-gradient(circle at 80% 80%, rgba(138, 43, 226, 0.1) 0%, transparent 50%);
+    radial-gradient(circle at 20% 20%, rgba(255, 0, 0, 0.12) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(255, 0, 0, 0.08) 0%, transparent 50%);
   pointer-events: none;
 }
 
@@ -99,12 +98,12 @@ body {
 
 .pixel-button:hover {
   background: #3a3a3a;
-  border-color: #ff00ff;
-  color: #ff00ff;
+  border-color: #ff0000;
+  color: #ff0000;
   box-shadow: 
     inset 2px 2px 0px #555555,
     inset -2px -2px 0px #222222,
-    0 0 8px rgba(255, 0, 255, 0.5);
+    0 0 8px rgba(255, 0, 0, 0.5);
 }
 
 .pixel-button:active {
@@ -116,12 +115,12 @@ body {
 
 .pixel-button.selected {
   background: #4a0a4a;
-  border-color: #ff00ff;
-  color: #ff00ff;
+  border-color: #ff0000;
+  color: #ff0000;
   box-shadow: 
     inset 2px 2px 0px #6a0a6a,
     inset -2px -2px 0px #2a0a2a,
-    0 0 12px rgba(255, 0, 255, 0.8);
+    0 0 12px rgba(255, 0, 0, 0.8);
   animation: pixelPulse 1s infinite;
 }
 
@@ -130,13 +129,13 @@ body {
     box-shadow: 
       inset 2px 2px 0px #6a0a6a,
       inset -2px -2px 0px #2a0a2a,
-      0 0 12px rgba(255, 0, 255, 0.8);
+      0 0 12px rgba(255, 0, 0, 0.8);
   }
   50% { 
     box-shadow: 
       inset 2px 2px 0px #6a0a6a,
       inset -2px -2px 0px #2a0a2a,
-      0 0 20px rgba(255, 0, 255, 1);
+      0 0 20px rgba(255, 0, 0, 1);
   }
 }
 
@@ -151,11 +150,11 @@ body {
 }
 
 .pixel-panel.highlighted {
-  border-color: #ff00ff;
+  border-color: #ff0000;
   box-shadow: 
     inset 2px 2px 0px #333333,
     inset -2px -2px 0px #0a0a0a,
-    0 0 16px rgba(255, 0, 255, 0.6);
+    0 0 16px rgba(255, 0, 0, 0.6);
 }
 
 .pixel-panel.outlined {
@@ -168,30 +167,18 @@ body {
 
 /* Pixel text effects */
 .pixel-glow-pink {
-  color: #ff00ff;
-  text-shadow: 
-    2px 0 0 #ff00ff,
-    -2px 0 0 #ff00ff,
-    0 2px 0 #ff00ff,
-    0 -2px 0 #ff00ff;
+  color: #ff0000;
+  text-shadow: none;
 }
 
 .pixel-glow-purple {
-  color: #8a2be2;
-  text-shadow: 
-    2px 0 0 #8a2be2,
-    -2px 0 0 #8a2be2,
-    0 2px 0 #8a2be2,
-    0 -2px 0 #8a2be2;
+  color: #cccccc;
+  text-shadow: none;
 }
 
 .pixel-glow-white {
   color: #ffffff;
-  text-shadow: 
-    2px 0 0 #ffffff,
-    -2px 0 0 #ffffff,
-    0 2px 0 #ffffff,
-    0 -2px 0 #ffffff;
+  text-shadow: none;
 }
 
 /* Blinking text animation */
@@ -211,7 +198,7 @@ body {
 
 @keyframes pixelFlashBorder {
   0%, 100% { border-color: #444444; }
-  50% { border-color: #ff00ff; }
+  50% { border-color: #ff0000; }
 }
 
 /* Scanline overlay */
@@ -311,35 +298,29 @@ body {
 
 /* Retro title effect */
 .retro-title {
-  font-family: 'Orbitron', monospace;
+  font-family: 'Minecraftia', monospace;
   font-weight: 900;
-  color: #ff00ff;
-  text-shadow: 
-    2px 0 0 #8a2be2,
-    -2px 0 0 #8a2be2,
-    0 2px 0 #8a2be2,
-    0 -2px 0 #8a2be2,
-    2px 2px 0 #4a0a4a,
-    -2px -2px 0 #4a0a4a;
-  animation: retroTitleGlow 3s ease-in-out infinite alternate;
+  color: #ff0000;
+  text-shadow: none;
+  animation: none;
 }
 
 @keyframes retroTitleGlow {
   from {
     text-shadow: 
-      2px 0 0 #8a2be2,
-      -2px 0 0 #8a2be2,
-      0 2px 0 #8a2be2,
-      0 -2px 0 #8a2be2,
+      2px 0 0 #ff0000,
+      -2px 0 0 #ff0000,
+      0 2px 0 #ff0000,
+      0 -2px 0 #ff0000,
       2px 2px 0 #4a0a4a,
       -2px -2px 0 #4a0a4a;
   }
   to {
     text-shadow: 
-      2px 0 0 #ff00ff,
-      -2px 0 0 #ff00ff,
-      0 2px 0 #ff00ff,
-      0 -2px 0 #ff00ff,
+      2px 0 0 #ff0000,
+      -2px 0 0 #ff0000,
+      0 2px 0 #ff0000,
+      0 -2px 0 #ff0000,
       2px 2px 0 #6a0a6a,
       -2px -2px 0 #6a0a6a;
   }
@@ -347,7 +328,7 @@ body {
 
 /* Arcade text style */
 .arcade-text {
-  font-family: 'Orbitron', monospace;
+  font-family: 'Minecraftia', monospace;
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 2px;
@@ -369,20 +350,20 @@ body {
 
 .pixel-menu-item:hover {
   background: #3a3a3a;
-  border-color: #ff00ff;
+  border-color: #ff0000;
   box-shadow: 
     inset 2px 2px 0px #555555,
     inset -2px -2px 0px #222222,
-    0 0 12px rgba(255, 0, 255, 0.5);
+    0 0 12px rgba(255, 0, 0, 0.5);
 }
 
 .pixel-menu-item.selected {
   background: #4a0a4a;
-  border-color: #ff00ff;
+  border-color: #ff0000;
   box-shadow: 
     inset 2px 2px 0px #6a0a6a,
     inset -2px -2px 0px #2a0a2a,
-    0 0 16px rgba(255, 0, 255, 0.8);
+    0 0 16px rgba(255, 0, 0, 0.8);
 }
 
 /* Pixel arrows */
@@ -393,13 +374,13 @@ body {
 }
 
 .pixel-arrow.right {
-  border-left: 8px solid #ff00ff;
+  border-left: 8px solid #ff0000;
   border-top: 6px solid transparent;
   border-bottom: 6px solid transparent;
 }
 
 .pixel-arrow.left {
-  border-right: 8px solid #ff00ff;
+  border-right: 8px solid #ff0000;
   border-top: 6px solid transparent;
   border-bottom: 6px solid transparent;
 }
@@ -409,7 +390,7 @@ body {
   display: inline-block;
   width: 16px;
   height: 16px;
-  background: #ff00ff;
+  background: #ff0000;
   animation: pixelSpin 1s linear infinite;
 }
 
@@ -438,7 +419,7 @@ body {
 }
 
 /* Utility classes */
-.text-pixel-pink { color: #ff00ff; }
+.text-pixel-pink { color: #ff0000; }
 .text-pixel-purple { color: #8a2be2; }
 .text-pixel-white { color: #ffffff; }
 .text-pixel-gray { color: #888888; }
@@ -446,6 +427,6 @@ body {
 .bg-pixel-dark { background-color: #1a1a1a; }
 .bg-pixel-darker { background-color: #0a0a0a; }
 
-.border-pixel-pink { border-color: #ff00ff; }
+.border-pixel-pink { border-color: #ff0000; }
 .border-pixel-purple { border-color: #8a2be2; }
 .border-pixel-gray { border-color: #444444; }

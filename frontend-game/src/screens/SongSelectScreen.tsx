@@ -1,21 +1,16 @@
 import React from 'react';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { NeonButton } from '../components/ui/NeonButton';
-import { GraffitiPanel } from '../components/ui/GraffitiPanel';
 import { useGameStore, Song } from '../store/gameStore';
 
 interface Character {
   id: string;
   name: string;
-  power: number;
-  speed: number;
-  style: number;
   color: string;
 }
 
 const CHARACTERS: Character[] = [
-  { id: 'bear', name: 'BEAR', power: 85, speed: 70, style: 60, color: 'from-red-500 to-orange-500' },
-  { id: 'man', name: 'MAN', power: 60, speed: 85, style: 80, color: 'from-blue-500 to-cyan-500' },
+  { id: 'bear', name: 'BEAR', color: 'from-red-500 to-orange-500' },
+  { id: 'man', name: 'MAN', color: 'from-blue-500 to-cyan-500' },
 ];
 
 type AppWindow = Window & { gameAudioContext?: AudioContext; gameGainNode?: GainNode };
@@ -256,9 +251,7 @@ export const SongSelectScreen: React.FC = () => {
   };
   
   return (
-    <div className="min-h-screen retro-bg scanlines p-8 relative">
-      {/* Retro grid background */}
-      <div className="absolute inset-0 pixel-bg opacity-15"></div>
+    <div className="min-h-screen p-8 relative">
       
       <div className="game-container">
         {/* Title */}
@@ -293,7 +286,6 @@ export const SongSelectScreen: React.FC = () => {
                       onClick={() => {
                         setSelectedCharIndex(index);
                         selectCharacter(1, char.id);
-                        playNavSfx();
                       }}
                     >
                       <div className="flex items-center space-x-3">

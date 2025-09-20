@@ -72,8 +72,7 @@ export const ModeSelectScreen: React.FC = () => {
   }, [selectedIndex, modes, setScreen]);
   
   return (
-    <div className="min-h-screen pixel-bg flex flex-col items-center justify-center relative">
-      <div className="scanlines"></div>
+    <div className="min-h-screen flex flex-col items-center justify-center relative">
       
       <div className="game-container">
         {/* Title */}

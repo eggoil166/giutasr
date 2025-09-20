@@ -355,11 +355,11 @@ export class GameEngine {
     
     // Skip top lane labels
     
-     // Draw accuracy info
-     this.ctx.fillStyle = '#ff00ff';
-     this.ctx.font = '10px "Minecraftia"';
-     this.ctx.fillText(`Accuracy: ${this.calculateAccuracy().toFixed(1)}%`, this.canvas.width / 2, 20);
-     this.ctx.fillText(`P:${this.perfectHits} G:${this.greatHits} OK:${this.goodHits} X:${this.missedHits}`, this.canvas.width / 2, 35);
+    // Draw accuracy info
+    this.ctx.fillStyle = '#ff00ff';
+    this.ctx.font = '10px "Press Start 2P"';
+    this.ctx.fillText(`Accuracy: ${this.calculateAccuracy().toFixed(1)}%`, this.canvas.width / 2, 20);
+    this.ctx.fillText(`P:${this.perfectHits} G:${this.greatHits} OK:${this.goodHits} X:${this.missedHits}`, this.canvas.width / 2, 35);
   // External UI now renders chase progress bar; removed internal draw to avoid duplication
   }
   

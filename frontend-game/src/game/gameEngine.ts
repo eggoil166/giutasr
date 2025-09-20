@@ -1,7 +1,7 @@
 export interface Note {
   id: string;
   lane: 0 | 1 | 2 | 3; // 4 lanes: Green, Red, Yellow, Blue
-  type: 'jab' | 'punch' | 'hook';
+  type: 'note';
   time: number;
   y: number;
   hit: boolean;
@@ -42,7 +42,6 @@ export class GameEngine {
   private goodHits = 0;
   private missedHits = 0;
   private onNoteResult: ((result: { judgment: Judgment; note: Note; player: number; accuracy: number }) => void) | null = null;
-  private onHealthUpdate: ((player: number, health: number, gameOver: boolean) => void) | null = null;
   
   constructor(canvas: HTMLCanvasElement, audioContext: AudioContext, gainNode: GainNode) {
     this.canvas = canvas;
@@ -83,23 +82,25 @@ export class GameEngine {
         return;
       }
 
-      const { parseChartToMoves } = await import('../lib/chartParser');
-      const moves = parseChartToMoves(text, difficulty);
+      const { parse, convertChartToGameNotes } = await import('../lib/chartParser');
+      const chart = parse(text);
+      const gameNotes = convertChartToGameNotes(chart, difficulty);
 
-      const laneMap: Record<number, 0 | 1 | 2 | 3> = { 0: 0, 1: 1, 2: 2, 3: 3 };
-      const typeFromMove: Record<string, Note['type']> = { jab: 'jab', punch: 'punch', hook: 'hook' };
-
-      this.notes = moves.map((m, idx) => ({
-        id: `note-${idx}-${m.rawPoint}`,
-        lane: laneMap[m.laneIndex] ?? 0,
-        type: typeFromMove[m.move] ?? 'jab',
-        time: m.ms,
-        y: -this.NOTE_SIZE,
-        hit: false,
+      this.notes = gameNotes.map(note => ({
+        ...note,
+        y: -this.NOTE_SIZE
       }));
 
-      this.totalNotes = this.notes.length;
+      this.totalNotes = gameNotes.length;
       this.notes.sort((a, b) => a.time - b.time);
+      
+      console.log('ChartLoaded', { 
+        songId, 
+        difficulty, 
+        totalNotes: this.totalNotes,
+        firstNoteTime: this.notes[0]?.time || 0,
+        lastNoteTime: this.notes[this.notes.length - 1]?.time || 0
+      });
     } catch (err) {
       console.error('ChartLoadError', err);
       this.notes = [];
@@ -150,9 +151,6 @@ export class GameEngine {
     this.onNoteResult = callback;
   }
   
-  setHealthUpdateCallback(callback: (player: number, health: number, gameOver: boolean) => void) {
-    this.onHealthUpdate = callback;
-  }
 
   private gameLoop = () => {
     if (!this.running) return;
@@ -185,11 +183,6 @@ export class GameEngine {
             player: 1, 
             accuracy: accuracy 
           });
-          
-          // Deduct health for missed note
-          if (this.onHealthUpdate) {
-            this.onHealthUpdate(1, -5, false); // Deduct 5 health
-          }
           
           if (this.onNoteResult) {
             this.onNoteResult({
@@ -276,20 +269,7 @@ export class GameEngine {
     ];
     
     const colors = laneColors[note.lane];
-    let shape: 'circle' | 'square' | 'diamond';
-    
-    // Shape based on note type
-    switch (note.type) {
-      case 'jab':
-        shape = 'circle';
-        break;
-      case 'punch':
-        shape = 'square';
-        break;
-      case 'hook':
-        shape = 'diamond';
-        break;
-    }
+    const shape = 'circle'; // All notes are circles
     
     // Enhanced glow effect for retro look
     this.ctx.shadowColor = colors.glow;
@@ -300,23 +280,7 @@ export class GameEngine {
     
     // Draw shape with retro styling
     this.ctx.beginPath();
-    switch (shape) {
-      case 'circle':
-        this.ctx.arc(x, note.y, this.NOTE_SIZE * 0.8, 0, Math.PI * 2);
-        break;
-      case 'square':
-        const size = this.NOTE_SIZE * 0.7;
-        this.ctx.rect(x - size, note.y - size, size * 2, size * 2);
-        break;
-      case 'diamond':
-        const dSize = this.NOTE_SIZE * 0.8;
-        this.ctx.moveTo(x, note.y - dSize);
-        this.ctx.lineTo(x + dSize, note.y);
-        this.ctx.lineTo(x, note.y + dSize);
-        this.ctx.lineTo(x - dSize, note.y);
-        this.ctx.closePath();
-        break;
-    }
+    this.ctx.arc(x, note.y, this.NOTE_SIZE * 0.8, 0, Math.PI * 2);
     this.ctx.fill();
     
     // Bright retro border
@@ -324,15 +288,9 @@ export class GameEngine {
     this.ctx.lineWidth = 3;
     this.ctx.stroke();
     this.ctx.shadowBlur = 0;
-    
-    // Pixel note type indicator
-    this.ctx.fillStyle = '#0a0a0a';
-    this.ctx.font = 'bold 6px "Press Start 2P"';
-    this.ctx.textAlign = 'center';
-    this.ctx.fillText(note.type.charAt(0).toUpperCase(), x, note.y + 2);
   }
   
-  handleInput(lane: 0 | 1 | 2 | 3, inputType: 'jab' | 'punch' | 'hook', player: number): { judgment: Judgment | null; note: Note | null; accuracy: number } {
+  handleInput(lane: 0 | 1 | 2 | 3, inputType: 'hit', player: number): { judgment: Judgment | null; note: Note | null; accuracy: number } {
     // Find the closest unhit note in the specified lane that matches the input type
     const laneNotes = this.notes.filter(note => 
       note.lane === lane && 
@@ -352,8 +310,7 @@ export class GameEngine {
 
       // If it's a wrong-lane press near a valid note, don't penalize health.
       if (otherLaneNotes.length === 0 && this.onHealthUpdate) {
-        // True whiff: deduct health
-        this.onHealthUpdate(player, -5, false);
+        // True whiff - no health system anymore
       }
 
       if (this.onNoteResult) {
@@ -399,11 +356,6 @@ export class GameEngine {
     } else {
       judgment = { type: 'Miss', score: 0 };
       this.missedHits++;
-      
-      // Deduct health for missed note
-      if (this.onHealthUpdate) {
-        this.onHealthUpdate(player, -5, false); // Deduct 5 health
-      }
       
       console.log('NoteMiss', { player, lane, deltaMs });
     }

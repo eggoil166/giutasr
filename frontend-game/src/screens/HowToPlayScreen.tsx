@@ -16,18 +16,10 @@ export const HowToPlayScreen: React.FC = () => {
       let inputName = '';
       
       switch (key) {
-        case 'f': inputName = 'P1 Left Jab'; break;
-        case 'd': inputName = 'P1 Left Punch'; break;
-        case 's': inputName = 'P1 Left Hook'; break;
-        case 'j': inputName = 'P1 Right Jab'; break;
-        case 'k': inputName = 'P1 Right Punch'; break;
-        case 'l': inputName = 'P1 Right Hook'; break;
-        case 'arrowleft': inputName = 'P2 Left Jab'; break;
-        case 'arrowdown': inputName = 'P2 Left Punch'; break;
-        case 'arrowup': inputName = 'P2 Left Hook'; break;
-        case 'arrowright': inputName = 'P2 Right Jab'; break;
-        case 'end': inputName = 'P2 Right Punch'; break;
-        case 'pagedown': inputName = 'P2 Right Hook'; break;
+        case 'v': inputName = 'GREEN LANE'; break;
+        case 'c': inputName = 'RED LANE'; break;
+        case 'x': inputName = 'YELLOW LANE'; break;
+        case 'z': inputName = 'BLUE LANE'; break;
       }
       
       if (inputName) {
@@ -87,19 +79,14 @@ export const HowToPlayScreen: React.FC = () => {
                 <h4 className="text-pixel-white text-sm mb-2">PLAYER 1</h4>
                 <div className="text-xs space-y-1">
                   <div className="flex justify-between">
-                    <span>V C X Z</span>
-                    <span className="text-pixel-gray">Lanes 1-4</span>
+                    <span className="text-lg">V C X Z</span>
+                    <span className="text-pixel-gray">Hit Notes</span>
                   </div>
                 </div>
               </div>
-              <div>
-                <h4 className="text-pixel-white text-sm mb-2">PLAYER 2</h4>
-                <div className="text-xs space-y-1">
-                  <div className="flex justify-between">
-                    <span>S L ; '</span>
-                    <span className="text-pixel-gray">Lanes 1-4</span>
-                  </div>
-                </div>
+              <div className="text-xs text-pixel-gray mt-4">
+                <div>ESC = PAUSE GAME</div>
+                <div>ENTER = SELECT/CONFIRM</div>
               </div>
             </div>
           </div>
@@ -134,7 +121,8 @@ export const HowToPlayScreen: React.FC = () => {
               <li>• Perfect timing = maximum points</li>
               <li>• Build combos for score multipliers</li>
               <li>• Missing notes damages health</li>
-              <li>• Watch the note shapes for variety</li>
+              <li>• Hit notes when they cross the line</li>
+              <li>• Different lanes = different colors</li>
             </ul>
           </div>
         </div>
@@ -162,7 +150,7 @@ export const HowToPlayScreen: React.FC = () => {
             <div className="pixel-panel p-8 max-w-md">
               <div className="text-center">
                 <h3 className="text-lg pixel-glow-pink mb-4">INPUT TEST</h3>
-                <p className="text-pixel-gray mb-6 text-sm">Press any game key to test</p>
+                <p className="text-pixel-gray mb-6 text-sm">Press V C X Z to test</p>
                 
                 <div className="h-16 flex items-center justify-center pixel-panel bg-pixel-darker mb-6">
                   {lastInput ? (

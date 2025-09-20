@@ -5,7 +5,7 @@ export interface InputEvent {
   action: InputAction;
   timestamp: number;
   lane: 0 | 1 | 2 | 3;
-  type: 'jab' | 'punch' | 'hook';
+  type: 'hit';
 }
 
 export class InputHandler {
@@ -44,24 +44,15 @@ export class InputHandler {
     
     switch (key.toLowerCase()) {
       case 'v':
-        return { player: 1, action: 'LANE_0', timestamp, lane: 0, type: 'jab' };
+        return { player: 1, action: 'LANE_0', timestamp, lane: 0, type: 'hit' };
       case 'c':
-        return { player: 1, action: 'LANE_1', timestamp, lane: 1, type: 'punch' };
+        return { player: 1, action: 'LANE_1', timestamp, lane: 1, type: 'hit' };
       case 'x':
-        return { player: 1, action: 'LANE_2', timestamp, lane: 2, type: 'hook' };
+        return { player: 1, action: 'LANE_2', timestamp, lane: 2, type: 'hit' };
       case 'z':
-        return { player: 1, action: 'LANE_3', timestamp, lane: 3, type: 'jab' };
+        return { player: 1, action: 'LANE_3', timestamp, lane: 3, type: 'hit' };
       
       // Player 2 controls
-      case 's':
-        return { player: 2, action: 'LANE_0', timestamp, lane: 0, type: 'jab' };
-      case 'l':
-        return { player: 2, action: 'LANE_1', timestamp, lane: 1, type: 'punch' };
-      case ';':
-        return { player: 2, action: 'LANE_2', timestamp, lane: 2, type: 'hook' };
-      case "'":
-        return { player: 2, action: 'LANE_3', timestamp, lane: 3, type: 'jab' };
-        
       default:
         return null;
     }

@@ -59,7 +59,7 @@ export class GameEngine {
   private readonly HIT_LINE_Y = 400;
   private readonly LANE_POSITIONS = [120, 200, 280, 360];
   private readonly NOTE_SIZE = 25;
-
+  
   private readonly HIT_TARGET_SIZE = 30;
   private hitTargetGlow: number[] = [0, 0, 0, 0];
   private hitTargetGlowTime: number[] = [0, 0, 0, 0];
@@ -180,11 +180,11 @@ export class GameEngine {
       this.totalNotes = 0;
     }
   }
-
+  
   start(songId?: string) {
-    // Ensure only one loop is running
-    if (this.running) this.stop();
-    this.running = true;
+  // Ensure only one loop is running
+  if (this.running) this.stop();
+  this.running = true;
     
     // Reset chase mechanics
     this.bearProgress = 10.0;
@@ -196,7 +196,7 @@ export class GameEngine {
     this.spacebarPressed = false;
     this.spacebarBoostMultiplier = 1.0;
     
-    if (songId) {
+  if (songId) {
       // kick off chart load and audio
       this.generateChartFromFile(songId).catch(err => console.error('ChartLoadError', err));
       this.playMusic(songId);
@@ -204,7 +204,7 @@ export class GameEngine {
     this.startTime = performance.now();
     
     // Start game loop
-    this.rafId = requestAnimationFrame(this.gameLoop);
+  this.rafId = requestAnimationFrame(this.gameLoop);
   }
   
   private playMusic(songId: string) {
@@ -309,7 +309,7 @@ export class GameEngine {
          console.log('Man caught the bear!');
        }
      }
-   }
+  }
   
   private render() {
     // Render 3D scene first (background)
@@ -322,25 +322,25 @@ export class GameEngine {
 
     // If 3D enabled, skip 2D lane guides and hit line
     if (!this.threeEnabled) {
-      // Draw all 4 lanes
-      this.LANE_POSITIONS.forEach(x => this.drawLane(x));
-      
-      // Draw hit line (horizontal)
-      this.ctx.strokeStyle = '#ff00ff';
-      this.ctx.lineWidth = 4;
-      this.ctx.shadowColor = '#ff00ff';
-      this.ctx.shadowBlur = 10;
-      this.ctx.beginPath();
-      this.ctx.moveTo(80, this.HIT_LINE_Y);
-      this.ctx.lineTo(400, this.HIT_LINE_Y);
-      this.ctx.stroke();
-      this.ctx.shadowBlur = 0;
+    // Draw all 4 lanes
+    this.LANE_POSITIONS.forEach(x => this.drawLane(x));
+    
+    // Draw hit line (horizontal)
+    this.ctx.strokeStyle = '#ff00ff';
+    this.ctx.lineWidth = 4;
+    this.ctx.shadowColor = '#ff00ff';
+    this.ctx.shadowBlur = 10;
+    this.ctx.beginPath();
+    this.ctx.moveTo(80, this.HIT_LINE_Y);
+    this.ctx.lineTo(400, this.HIT_LINE_Y);
+    this.ctx.stroke();
+    this.ctx.shadowBlur = 0;
     }
     
     // If 3D enabled, skip drawing 2D notes to avoid duplication
     if (!this.threeEnabled) {
       const now = this.currentTime;
-      this.notes.forEach(note => {
+    this.notes.forEach(note => {
         const sustainActive = !!(note.holdDuration && note.holdHeadHitTime !== undefined && !note.releasedEarly && now < (note.holdHeadHitTime + note.holdDuration));
         if ((!note.hit || sustainActive) && note.y > -this.NOTE_SIZE - 400 && note.y < this.canvas.height + this.NOTE_SIZE) {
           this.drawNote(note, sustainActive);
@@ -355,13 +355,13 @@ export class GameEngine {
     
     // Skip top lane labels
     
-     // Draw accuracy info
-     this.ctx.fillStyle = '#ff00ff';
-     this.ctx.font = '10px "Press Start 2P"';
-     this.ctx.fillText(`Accuracy: ${this.calculateAccuracy().toFixed(1)}%`, this.canvas.width / 2, 20);
-     this.ctx.fillText(`P:${this.perfectHits} G:${this.greatHits} OK:${this.goodHits} X:${this.missedHits}`, this.canvas.width / 2, 35);
+    // Draw accuracy info
+    this.ctx.fillStyle = '#ff00ff';
+    this.ctx.font = '10px "Press Start 2P"';
+    this.ctx.fillText(`Accuracy: ${this.calculateAccuracy().toFixed(1)}%`, this.canvas.width / 2, 20);
+    this.ctx.fillText(`P:${this.perfectHits} G:${this.greatHits} OK:${this.goodHits} X:${this.missedHits}`, this.canvas.width / 2, 35);
   // External UI now renders chase progress bar; removed internal draw to avoid duplication
-   }
+  }
   
   private drawLane(x: number) {
     // Draw lane guide line
@@ -374,7 +374,7 @@ export class GameEngine {
     this.ctx.stroke();
     this.ctx.setLineDash([]);
   }
-
+  
   // --- Three.js helpers ---
   private initThree() {
     try {
@@ -680,14 +680,14 @@ export class GameEngine {
     // If spacebar is pressed, make notes glow bright
     if (this.spacebarPressed) {
       // Intense glow effect for spacebar boost
-      this.ctx.shadowColor = colors.glow;
+    this.ctx.shadowColor = colors.glow;
       this.ctx.shadowBlur = 20;
-      
+    
       // Draw multiple glowing circles for bright effect
       for (let i = 0; i < 3; i++) {
         const alpha = 0.6 - i * 0.15;
         this.ctx.globalAlpha = alpha;
-        this.ctx.fillStyle = colors.primary;
+    this.ctx.fillStyle = colors.primary;
         this.ctx.beginPath();
         this.ctx.arc(x, note.y, this.NOTE_SIZE * (0.8 + i * 0.3), 0, Math.PI * 2);
         this.ctx.fill();
@@ -816,7 +816,7 @@ export class GameEngine {
       }
       return { judgment: { type: 'Miss', score: 0 }, note: null, accuracy };
     }
-
+    
     // Find the closest by absolute time difference
     const closestNote = laneNotes.reduce((closest, note) => {
       const a = Math.abs((closest.time) - now);
@@ -829,7 +829,7 @@ export class GameEngine {
     if (closestNote.holdDuration) {
       closestNote.holdHeadHitTime = this.currentTime;
     }
-    
+
     // Determine judgment
     let judgment: Judgment;
     const baseScore = 100;
@@ -874,13 +874,13 @@ export class GameEngine {
     return Math.max(0, Math.min(100, (weightedHits / processed) * 100));
   }
   
-   getStats() {
-     return {
-       totalNotes: this.perfectHits + this.greatHits + this.goodHits + this.missedHits,
-       perfectHits: this.perfectHits,
-       greatHits: this.greatHits,
-       goodHits: this.goodHits,
-       missedHits: this.missedHits,
+  getStats() {
+    return {
+      totalNotes: this.perfectHits + this.greatHits + this.goodHits + this.missedHits,
+      perfectHits: this.perfectHits,
+      greatHits: this.greatHits,
+      goodHits: this.goodHits,
+      missedHits: this.missedHits,
        accuracy: this.calculateAccuracy(),
        bearProgress: this.bearProgress,
        manProgress: this.manProgress,
@@ -888,8 +888,8 @@ export class GameEngine {
        gameResult: this.gameResult,
        spacebarPressed: this.spacebarPressed,
        spacebarBoostMultiplier: this.spacebarBoostMultiplier
-     };
-   }
+    };
+  }
   
   pause() {
     if (this.audioElement) {

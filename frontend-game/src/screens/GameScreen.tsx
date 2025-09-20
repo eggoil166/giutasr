@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { GameEngine, Note, Judgment } from '../game/gameEngine';
+import { GameEngine as MultiplayerGameEngine } from '../game/gameEngineMultiplayer';
 import { InputHandler, InputEvent } from '../game/inputHandler';
 
 declare global {
@@ -12,7 +13,7 @@ declare global {
 
 export const GameScreen: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const gameEngineRef = useRef<GameEngine | null>(null);
+  const gameEngineRef = useRef<GameEngine | MultiplayerGameEngine | null>(null);
   const inputHandlerRef = useRef<InputHandler | null>(null);
   
   const { 
@@ -111,8 +112,11 @@ export const GameScreen: React.FC = () => {
   const initialVolume = Math.max(0, Math.min(1, settings.volume ?? 1));
   gainNode.gain.value = initialVolume;
     
-    // Initialize game systems
-    gameEngineRef.current = new GameEngine(canvasRef.current, audioContext, gainNode);
+    // Initialize game systems - use multiplayer engine if multiplayer mode is selected
+    const isMultiplayer = lobby.mode === 'host' || lobby.mode === 'join' || lobby.connectedP2;
+    gameEngineRef.current = isMultiplayer 
+      ? new MultiplayerGameEngine(canvasRef.current, audioContext, gainNode)
+      : new GameEngine(canvasRef.current, audioContext, gainNode);
     inputHandlerRef.current = new InputHandler();
     
     // Set up note result callback
@@ -348,8 +352,8 @@ export const GameScreen: React.FC = () => {
         <div className="flex-shrink-0">
           <canvas
             ref={canvasRef}
-            width={600}
-            height={700}
+            width={950}
+            height={670}
             className=""
             style={{ imageRendering: 'pixelated', backgroundColor: 'transparent' }}
           />

@@ -1,0 +1,14 @@
+C:\Users\danie\bigred\server\target\wasm32-unknown-unknown\release\deps\serde-eb0f829bb1da12a5.d: C:\Users\danie\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.225\src\lib.rs C:\Users\danie\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.225\src\integer128.rs C:\Users\danie\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.225\src\private\mod.rs C:\Users\danie\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.225\src\private\de.rs C:\Users\danie\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.225\src\private\ser.rs C:\Users\danie\bigred\server\target\wasm32-unknown-unknown\release\build\serde-e0f2986f069b9e8e\out/private.rs
+
+C:\Users\danie\bigred\server\target\wasm32-unknown-unknown\release\deps\libserde-eb0f829bb1da12a5.rlib: C:\Users\danie\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.225\src\lib.rs C:\Users\danie\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.225\src\integer128.rs C:\Users\danie\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.225\src\private\mod.rs C:\Users\danie\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.225\src\private\de.rs C:\Users\danie\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.225\src\private\ser.rs C:\Users\danie\bigred\server\target\wasm32-unknown-unknown\release\build\serde-e0f2986f069b9e8e\out/private.rs
+
+C:\Users\danie\bigred\server\target\wasm32-unknown-unknown\release\deps\libserde-eb0f829bb1da12a5.rmeta: C:\Users\danie\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.225\src\lib.rs C:\Users\danie\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.225\src\integer128.rs C:\Users\danie\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.225\src\private\mod.rs C:\Users\danie\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.225\src\private\de.rs C:\Users\danie\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.225\src\private\ser.rs C:\Users\danie\bigred\server\target\wasm32-unknown-unknown\release\build\serde-e0f2986f069b9e8e\out/private.rs
+
+C:\Users\danie\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.225\src\lib.rs:
+C:\Users\danie\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.225\src\integer128.rs:
+C:\Users\danie\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.225\src\private\mod.rs:
+C:\Users\danie\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.225\src\private\de.rs:
+C:\Users\danie\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.225\src\private\ser.rs:
+C:\Users\danie\bigred\server\target\wasm32-unknown-unknown\release\build\serde-e0f2986f069b9e8e\out/private.rs:
+
+# env-dep:OUT_DIR=C:\\Users\\danie\\bigred\\server\\target\\wasm32-unknown-unknown\\release\\build\\serde-e0f2986f069b9e8e\\out

@@ -15,6 +15,7 @@ function AppWithTest() {
   const gainRef = useRef<GainNode | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const [musicStarted, setMusicStarted] = useState(false);
+  const fadeTime = 1.0; // seconds
 
   useEffect(() => {
     const audio = new Audio(sound);
@@ -38,7 +39,7 @@ function AppWithTest() {
     };
   }, []);
 
-  // Start music after user interaction (required by browsers)
+  // Start music after user interaction
   const handleUserInteraction = () => {
     if (!musicStarted && audioRef.current && audioContextRef.current) {
       audioContextRef.current.resume().then(() => {
@@ -48,21 +49,33 @@ function AppWithTest() {
     }
   };
 
-  // Fade in/out based on current screen
+  // Fade and pause/resume depending on current screen
   useEffect(() => {
-    if (!gainRef.current || !musicStarted) return;
+    if (!gainRef.current || !audioRef.current || !musicStarted) return;
 
     const gain = gainRef.current;
-    const fadeTime = 1.0; // seconds
+    const audio = audioRef.current;
+    const now = audioContextRef.current!.currentTime;
+
+    gain.gain.cancelScheduledValues(now);
 
     if (currentScreen === 'GAME') {
-      // Fade out
-      gain.gain.cancelScheduledValues(gainRef.current.gain.value);
-      gain.gain.linearRampToValueAtTime(0, audioContextRef.current!.currentTime + fadeTime);
+      // Fade out to 0
+      gain.gain.linearRampToValueAtTime(0, now + fadeTime);
+      // Pause after fadeTime
+      setTimeout(() => {
+        audio.pause();
+        audio.currentTime = 0; // optional: reset to start
+      }, fadeTime * 1000);
     } else {
-      // Fade in
-      gain.gain.cancelScheduledValues(gainRef.current.gain.value);
-      gain.gain.linearRampToValueAtTime(1, audioContextRef.current!.currentTime + fadeTime);
+      // Resume audio if paused
+      if (audio.paused) {
+        audioContextRef.current!.resume().then(() => {
+          audio.play().catch(() => {});
+        });
+      }
+      // Fade in to full volume
+      gain.gain.linearRampToValueAtTime(1, now + fadeTime);
     }
   }, [currentScreen, musicStarted]);
 

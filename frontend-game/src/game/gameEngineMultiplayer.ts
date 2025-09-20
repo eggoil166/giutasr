@@ -229,7 +229,17 @@ export class GameEngine {
   }
   
   private playMusic(songId: string) {
-    this.audioElement = new Audio(`/songs/${songId}/song.ogg`);
+    const basePath = `/songs/${songId}/song`;
+    this.audioElement = new Audio(`${basePath}.ogg`);
+    const tryMp4 = () => {
+      if (this.audioElement && !this.audioElement.src.endsWith('.mp4')) {
+        this.audioElement.removeEventListener('error', tryMp4);
+        this.audioElement.src = `${basePath}.mp4`;
+        this.audioElement.load();
+        this.audioElement.play().catch(err => console.warn('Music mp4 playback failed', err));
+      }
+    };
+    this.audioElement.addEventListener('error', tryMp4, { once: true });
     this.audioElement.volume = 1; // use gainNode for master volume control
     
     // Connect to Web Audio API

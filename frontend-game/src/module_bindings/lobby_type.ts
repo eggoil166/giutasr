@@ -47,6 +47,10 @@ export type Lobby = {
   started: boolean,
   redScore: number,
   blueScore: number,
+  bearProgress: number,
+  manProgress: number,
+  gameOver: boolean,
+  gameResult: string | undefined,
 };
 
 /**

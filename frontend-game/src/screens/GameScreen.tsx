@@ -375,10 +375,10 @@ export const GameScreen: React.FC = () => {
           <div className="pixel-panel p-8 text-center">
             <h2 className="retro-title text-3xl mb-6 pixel-glow-pink">PAUSED</h2>
             <div className="space-y-4">
-              <button className="pixel-button w-full" onClick={togglePause}>
+              <button className="nes-btn is-primary w-full" onClick={togglePause}>
                 RESUME
               </button>
-              <button className="pixel-button w-full" onClick={() => setScreen('TITLE')}>
+              <button className="nes-btn w-full" onClick={() => setScreen('TITLE')}>
                 QUIT TO HOME
               </button>
             </div>
@@ -393,13 +393,13 @@ export const GameScreen: React.FC = () => {
             <h2 className="retro-title text-4xl mb-4 pixel-glow-pink">SONG COMPLETE</h2>
             <p className="pixel-glow-purple text-lg mb-6">GREAT JOB!</p>
             <div className="space-y-4">
-              <button className="pixel-button w-full text-lg py-4" onClick={() => setScreen('RESULTS')}>
+              <button className="nes-btn is-success w-full text-lg" onClick={() => setScreen('RESULTS')}>
                 VIEW RESULTS
               </button>
-              <button className="pixel-button w-full" onClick={restartSong}>
+              <button className="nes-btn is-primary w-full" onClick={restartSong}>
                 PLAY AGAIN
               </button>
-              <button className="pixel-button w-full" onClick={() => setScreen('TITLE')}>
+              <button className="nes-btn w-full" onClick={() => setScreen('TITLE')}>
                 QUIT TO MENU
               </button>
             </div>

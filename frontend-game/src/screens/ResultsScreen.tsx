@@ -87,10 +87,9 @@ export const ResultsScreen: React.FC = () => {
         
         {/* Action Buttons */}
         <div className="text-center space-y-4">
-          <div className="pixel-button selected text-lg px-8 py-4 pixel-blink">
+          <button className="nes-btn is-primary text-lg px-8 pixel-blink">
             ENTER CONTINUE
-          </div>
-          
+          </button>
           <div className="text-pixel-gray text-sm">
             R RESTART GAME
           </div>

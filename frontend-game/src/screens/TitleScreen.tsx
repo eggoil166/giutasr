@@ -32,14 +32,14 @@ export const TitleScreen: React.FC = () => {
         </div>
         
         {/* Start Prompt */}
-        <div className="pixel-blink mb-12">
-          <p className="text-2xl pixel-glow-pink mb-8">
-            PRESS ENTER TO START
-          </p>
-          <div className="pixel-button selected text-lg px-8 py-4">
-            ENTER
+          <div className="pixel-blink mb-12">
+            <p className="text-2xl pixel-glow-pink mb-8">
+              PRESS ENTER TO START
+            </p>
+            <button className="nes-btn is-primary text-lg px-8">
+              ENTER
+            </button>
           </div>
-        </div>
         
         {/* Arcade UI Elements */}
         <div className="absolute top-8 left-8 pixel-glow-purple text-sm">

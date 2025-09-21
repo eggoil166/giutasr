@@ -47,6 +47,11 @@ export interface Gameplay {
   manProgress: number;
   synchronizedGameOver: boolean;
   synchronizedGameResult?: 'bear_escaped' | 'man_caught' | null;
+  // Individual competitive scores from server
+  player1CompetitiveScore: number;
+  player2CompetitiveScore: number;
+  player1CompetitiveAccuracy: number;
+  player2CompetitiveAccuracy: number;
 }
 
 export interface GameState {
@@ -112,6 +117,10 @@ export const useGameStore = create<GameState>((set, get) => ({
     manProgress: 0.0,
     synchronizedGameOver: false,
     synchronizedGameResult: null,
+    player1CompetitiveScore: 0,
+    player2CompetitiveScore: 0,
+    player1CompetitiveAccuracy: 100,
+    player2CompetitiveAccuracy: 100,
   },
 
   setScreen: (screen) => set({ currentScreen: screen }),
@@ -257,6 +266,10 @@ export const useGameStore = create<GameState>((set, get) => ({
             manProgress: row.manProgress ?? state.gameplay.manProgress,
             synchronizedGameOver: row.gameOver ?? state.gameplay.synchronizedGameOver,
             synchronizedGameResult: row.gameResult as 'bear_escaped' | 'man_caught' | null ?? state.gameplay.synchronizedGameResult,
+            player1CompetitiveScore: row.redPlayerScore ?? state.gameplay.player1CompetitiveScore,
+            player2CompetitiveScore: row.bluePlayerScore ?? state.gameplay.player2CompetitiveScore,
+            player1CompetitiveAccuracy: row.redPlayerAccuracy ?? state.gameplay.player1CompetitiveAccuracy,
+            player2CompetitiveAccuracy: row.bluePlayerAccuracy ?? state.gameplay.player2CompetitiveAccuracy,
           },
         }));
       }
@@ -317,6 +330,10 @@ export const useGameStore = create<GameState>((set, get) => ({
             manProgress: row.manProgress ?? state.gameplay.manProgress,
             synchronizedGameOver: row.gameOver ?? state.gameplay.synchronizedGameOver,
             synchronizedGameResult: row.gameResult as 'bear_escaped' | 'man_caught' | null ?? state.gameplay.synchronizedGameResult,
+            player1CompetitiveScore: row.redPlayerScore ?? state.gameplay.player1CompetitiveScore,
+            player2CompetitiveScore: row.bluePlayerScore ?? state.gameplay.player2CompetitiveScore,
+            player1CompetitiveAccuracy: row.redPlayerAccuracy ?? state.gameplay.player1CompetitiveAccuracy,
+            player2CompetitiveAccuracy: row.bluePlayerAccuracy ?? state.gameplay.player2CompetitiveAccuracy,
           },
         }));
       }
@@ -384,6 +401,10 @@ export const useGameStore = create<GameState>((set, get) => ({
       manProgress: 0.0,
       synchronizedGameOver: false,
       synchronizedGameResult: null,
+      player1CompetitiveScore: 0,
+      player2CompetitiveScore: 0,
+      player1CompetitiveAccuracy: 100,
+      player2CompetitiveAccuracy: 100,
     },
   }),
 }));

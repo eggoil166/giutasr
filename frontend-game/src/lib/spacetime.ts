@@ -99,6 +99,10 @@ export const LobbyApi = {
   updateGameState(conn: DbConnection, code: string, bearProgress: number, manProgress: number, gameOver: boolean, gameResult?: string) { 
     (conn as any).reducers.updateGameState?.(code, bearProgress, manProgress, gameOver, gameResult); 
   },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  updatePlayerScore(conn: DbConnection, code: string, score: number, accuracy: number) { 
+    (conn as any).reducers.updatePlayerScore?.(code, score, accuracy); 
+  },
 };
 
 export function subscribeLobby(code: string, onChange: (row: Lobby | null) => void): () => void {

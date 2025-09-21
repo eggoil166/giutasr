@@ -29,6 +29,11 @@ pub struct Lobby {
     started: bool,
     red_score: u32,
     blue_score: u32,
+    // Individual player competitive scores
+    red_player_score: u32,
+    blue_player_score: u32,
+    red_player_accuracy: f32,
+    blue_player_accuracy: f32,
     // Bear vs Man chase mechanics
     bear_progress: f32,
     man_progress: f32,
@@ -64,6 +69,10 @@ pub fn create_lobby(ctx: &ReducerContext, code: String) -> Result<(), String> {
     started: false,
     red_score: 0,
     blue_score: 0,
+    red_player_score: 0,
+    blue_player_score: 0,
+    red_player_accuracy: 100.0,
+    blue_player_accuracy: 100.0,
     bear_progress: 10.0,
     man_progress: 0.0,
     game_over: false,
@@ -196,6 +205,30 @@ pub fn update_game_state(ctx: &ReducerContext, code: String, bear_progress: f32,
                 man_progress, 
                 game_over, 
                 game_result, 
+                ..lobby 
+            });
+            Ok(())
+        } else {
+            Err("You are not a member of this lobby".into())
+        }
+    } else { Err("Lobby not found".into()) }
+}
+
+#[reducer]
+pub fn update_player_score(ctx: &ReducerContext, code: String, score: u32, accuracy: f32) -> Result<(), String> {
+    let code_up = code.to_uppercase();
+    if let Some(lobby) = ctx.db.lobby().code().find(&code_up) {
+        if lobby.red == Some(ctx.sender) {
+            ctx.db.lobby().code().update(Lobby { 
+                red_player_score: score, 
+                red_player_accuracy: accuracy, 
+                ..lobby 
+            });
+            Ok(())
+        } else if lobby.blue == Some(ctx.sender) {
+            ctx.db.lobby().code().update(Lobby { 
+                blue_player_score: score, 
+                blue_player_accuracy: accuracy, 
                 ..lobby 
             });
             Ok(())

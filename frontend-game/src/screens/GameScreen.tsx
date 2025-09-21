@@ -119,6 +119,22 @@ export const GameScreen: React.FC = () => {
       }
     }
   }, [lobby.mode, lobby.code, lobby.connectedP2]);
+
+  // Function to sync individual player score to server
+  const syncPlayerScore = useCallback((score: number, accuracy: number) => {
+    const isMultiplayer = lobby.mode === 'host' || lobby.mode === 'join' || lobby.connectedP2;
+    if (isMultiplayer && lobby.code) {
+      const conn = getConn();
+      if (conn) {
+        try {
+          LobbyApi.updatePlayerScore(conn, lobby.code, score, accuracy);
+          console.log('Synced player score to server:', { score, accuracy });
+        } catch (e) {
+          console.warn('Failed to sync player score:', e);
+        }
+      }
+    }
+  }, [lobby.mode, lobby.code, lobby.connectedP2]);
   
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -146,6 +162,14 @@ export const GameScreen: React.FC = () => {
     // Set up note result callback
     gameEngineRef.current.setNoteResultCallback(handleNoteResult);
     
+    // Setup score synchronization for multiplayer
+    if (isMultiplayer && 'setScoreUpdateCallback' in gameEngineRef.current && 'setLocalPlayer' in gameEngineRef.current) {
+      const localPlayerNumber = lobby.side === 'blue' ? 2 : 1;
+      gameEngineRef.current.setLocalPlayer(localPlayerNumber);
+      gameEngineRef.current.setScoreUpdateCallback(syncPlayerScore);
+      console.log('Setup score sync for local player:', localPlayerNumber);
+    }
+    
   // Setup input handling
   const cleanup = inputHandlerRef.current.onInput(handleInput);
     
@@ -156,11 +180,11 @@ export const GameScreen: React.FC = () => {
       const stats = engine.getStats();
       
       // Use synchronized values in multiplayer, local values in single player
-      const isMultiplayer = lobby.mode === 'host' || lobby.mode === 'join' || lobby.connectedP2;
-      const currentBearProgress = isMultiplayer ? gameplay.bearProgress : stats.bearProgress;
-      const currentManProgress = isMultiplayer ? gameplay.manProgress : stats.manProgress;
-      const currentGameOver = isMultiplayer ? gameplay.synchronizedGameOver : stats.gameOver;
-      const currentGameResult = isMultiplayer ? gameplay.synchronizedGameResult : stats.gameResult;
+      const isMultiplayerStats = lobby.mode === 'host' || lobby.mode === 'join' || lobby.connectedP2;
+      const currentBearProgress = isMultiplayerStats ? gameplay.bearProgress : stats.bearProgress;
+      const currentManProgress = isMultiplayerStats ? gameplay.manProgress : stats.manProgress;
+      const currentGameOver = isMultiplayerStats ? gameplay.synchronizedGameOver : stats.gameOver;
+      const currentGameResult = isMultiplayerStats ? gameplay.synchronizedGameResult : stats.gameResult;
       
       setBearProgress(currentBearProgress);
       setManProgress(currentManProgress);
@@ -177,7 +201,7 @@ export const GameScreen: React.FC = () => {
       }
       
       // Sync local game state to server in multiplayer
-      if (isMultiplayer && lobby.code) {
+      if (isMultiplayerStats && lobby.code) {
         syncGameState(stats.bearProgress, stats.manProgress, stats.gameOver, stats.gameResult || undefined);
       }
       
@@ -188,7 +212,7 @@ export const GameScreen: React.FC = () => {
           
           let currentPlayerWon = false;
           
-          if (isMultiplayer) {
+          if (isMultiplayerStats) {
             // In multiplayer, determine win condition based on character assignment
             const localPlayer = lobby.side === 'blue' ? 2 : 1;
             const localPlayerCharacter = localPlayer === 1 ? players.p1.characterId : players.p2.characterId;
@@ -213,7 +237,7 @@ export const GameScreen: React.FC = () => {
             setPlayerWon(null);
           }
           
-          if (isMultiplayer) {
+          if (isMultiplayerStats) {
             // Auto-restart the song in multiplayer mode
             console.log('Multiplayer song complete - auto-restarting...');
             setTimeout(() => {
@@ -266,10 +290,15 @@ export const GameScreen: React.FC = () => {
     updateGameplay,
     setScreen,
     syncGameState,
+    syncPlayerScore,
     gameplay.bearProgress,
     gameplay.manProgress,
     gameplay.synchronizedGameOver,
     gameplay.synchronizedGameResult,
+    gameplay.player1CompetitiveScore,
+    gameplay.player2CompetitiveScore,
+    gameplay.player1CompetitiveAccuracy,
+    gameplay.player2CompetitiveAccuracy,
   ]);
 
   // React to volume changes in settings
@@ -326,16 +355,23 @@ export const GameScreen: React.FC = () => {
     // For the right panel (player 2), show remote player's stats
     const isLocalPlayerPanel = (player === 1 && localPlayerNumber === 1) || (player === 2 && localPlayerNumber === 2);
     
-    // Use individual player scores from engine if available, otherwise fall back to gameplay store
+    // Use synchronized competitive scores from server in multiplayer, local scores in single player
     let score, accuracy;
-    if (isLocalPlayerPanel) {
-      // Show local player's score
-      score = localPlayerNumber === 1 ? player1Score : player2Score;
-      accuracy = localPlayerNumber === 1 ? player1Accuracy : player2Accuracy;
+    if (isMultiplayer) {
+      // Use synchronized scores from server
+      if (isLocalPlayerPanel) {
+        // Show local player's score
+        score = localPlayerNumber === 1 ? gameplay.player1CompetitiveScore : gameplay.player2CompetitiveScore;
+        accuracy = localPlayerNumber === 1 ? gameplay.player1CompetitiveAccuracy : gameplay.player2CompetitiveAccuracy;
+      } else {
+        // Show remote player's score
+        score = localPlayerNumber === 1 ? gameplay.player2CompetitiveScore : gameplay.player1CompetitiveScore;
+        accuracy = localPlayerNumber === 1 ? gameplay.player2CompetitiveAccuracy : gameplay.player1CompetitiveAccuracy;
+      }
     } else {
-      // Show remote player's score
-      score = localPlayerNumber === 1 ? player2Score : player1Score;
-      accuracy = localPlayerNumber === 1 ? player2Accuracy : player1Accuracy;
+      // Single player mode - use local engine scores
+      score = player === 1 ? player1Score : player2Score;
+      accuracy = player === 1 ? player1Accuracy : player2Accuracy;
     }
     
     const combo = player === 1 ? gameplay.comboP1 : gameplay.comboP2; // Keep combo from gameplay store for now
@@ -420,25 +456,32 @@ export const GameScreen: React.FC = () => {
             >🧍</div>
           </div>
           <div className="flex justify-between text-[10px] mt-1 font-mono">
-            <div className="flex items-center gap-2">
-              <span className="pixel-glow-green">BEAR {bearProgress.toFixed(1)}%</span>
-              {players.p1.characterId === 'bear' && (
-                <span className="text-green-400">P1: {player1Score}</span>
-              )}
-              {players.p2.characterId === 'bear' && (
-                <span className="text-green-400">P2: {player2Score}</span>
-              )}
-            </div>
-            {bearBoost && <span className="pixel-glow-yellow animate-pulse">BOOST!</span>}
-            <div className="flex items-center gap-2">
-              {players.p1.characterId === 'man' && (
-                <span className="text-red-400">P1: {player1Score}</span>
-              )}
-              {players.p2.characterId === 'man' && (
-                <span className="text-red-400">P2: {player2Score}</span>
-              )}
-              <span className="pixel-glow-red">MAN {manProgress.toFixed(1)}%</span>
-            </div>
+            {(() => {
+              const isMultiplayer = lobby.mode === 'host' || lobby.mode === 'join' || lobby.connectedP2;
+              return (
+                <>
+                  <div className="flex items-center gap-2">
+                    <span className="pixel-glow-green">BEAR {bearProgress.toFixed(1)}%</span>
+                    {players.p1.characterId === 'bear' && (
+                      <span className="text-green-400">P1: {isMultiplayer ? gameplay.player1CompetitiveScore : player1Score}</span>
+                    )}
+                    {players.p2.characterId === 'bear' && (
+                      <span className="text-green-400">P2: {isMultiplayer ? gameplay.player2CompetitiveScore : player2Score}</span>
+                    )}
+                  </div>
+                  {bearBoost && <span className="pixel-glow-yellow animate-pulse">BOOST!</span>}
+                  <div className="flex items-center gap-2">
+                    {players.p1.characterId === 'man' && (
+                      <span className="text-red-400">P1: {isMultiplayer ? gameplay.player1CompetitiveScore : player1Score}</span>
+                    )}
+                    {players.p2.characterId === 'man' && (
+                      <span className="text-red-400">P2: {isMultiplayer ? gameplay.player2CompetitiveScore : player2Score}</span>
+                    )}
+                    <span className="pixel-glow-red">MAN {manProgress.toFixed(1)}%</span>
+                  </div>
+                </>
+              );
+            })()}
           </div>
           {gameResult && (
             <div className="text-center mt-2 text-xs pixel-glow-pink">

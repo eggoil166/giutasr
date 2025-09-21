@@ -108,6 +108,8 @@ export class GameEngine {
   private player2MissedHits = 0;
   
   private onNoteResult: ((result: { judgment: Judgment; note: Note; player: number; accuracy: number }) => void) | null = null;
+  private onScoreUpdate: ((score: number, accuracy: number) => void) | null = null;
+  private localPlayerNumber: 1 | 2 = 1; // Track which player is local to this client
   
   constructor(canvas: HTMLCanvasElement, audioContext: AudioContext, gainNode: GainNode) {
     this.canvas = canvas;
@@ -281,6 +283,14 @@ export class GameEngine {
     this.onNoteResult = callback;
   }
   
+  setScoreUpdateCallback(callback: (score: number, accuracy: number) => void) {
+    this.onScoreUpdate = callback;
+  }
+  
+  setLocalPlayer(playerNumber: 1 | 2) {
+    this.localPlayerNumber = playerNumber;
+  }
+  
 
   private gameLoop = () => {
     if (!this.running) return;
@@ -335,6 +345,13 @@ export class GameEngine {
               player: missedPlayer,
               accuracy
             });
+          }
+          
+          // Sync local player's score to server if they missed
+          if (missedPlayer === this.localPlayerNumber && this.onScoreUpdate) {
+            const localScore = this.localPlayerNumber === 1 ? this.player1Score : this.player2Score;
+            const localAccuracy = this.calculatePlayerAccuracy(this.localPlayerNumber);
+            this.onScoreUpdate(localScore, localAccuracy);
           }
         }
       }
@@ -1084,6 +1101,13 @@ export class GameEngine {
     console.log('AccuracyUpdated', { player, accuracy });
     
     if (this.onNoteResult) this.onNoteResult({ judgment, note: closestNote, player, accuracy });
+    
+    // Sync local player's score to server
+    if (player === this.localPlayerNumber && this.onScoreUpdate) {
+      const localScore = this.localPlayerNumber === 1 ? this.player1Score : this.player2Score;
+      const localAccuracy = this.calculatePlayerAccuracy(this.localPlayerNumber);
+      this.onScoreUpdate(localScore, localAccuracy);
+    }
     
     return { judgment, note: closestNote, accuracy };
   }

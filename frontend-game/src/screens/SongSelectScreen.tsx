@@ -470,16 +470,19 @@ export const SongSelectScreen: React.FC = () => {
                     <div className={`text-lg ${lobby.p1Ready ? 'text-green-400' : 'text-yellow-400'}`}>
                       {lobby.p1Ready ? '✓ READY' : '⏳ NOT READY'}
                     </div>
-                    <button
-                      onClick={() => toggleReady(1)}
-                      className={`mt-2 pixel-button text-xs ${
-                        lobby.p1Ready 
-                          ? 'border-4 border-red-500 text-red-400' 
-                          : 'border-4 border-green-500 text-green-400'
-                      }`}
-                    >
-                      {lobby.p1Ready ? 'UNREADY' : 'READY UP'}
-                    </button>
+                    {/* Only show toggle for player 1 if this client IS player 1 */}
+                    {lobby.side === 'red' && (
+                      <button
+                        onClick={() => toggleReady(1)}
+                        className={`mt-2 pixel-button text-xs ${
+                          lobby.p1Ready 
+                            ? 'border-4 border-red-500 text-red-400' 
+                            : 'border-4 border-green-500 text-green-400'
+                        }`}
+                      >
+                        {lobby.p1Ready ? 'UNREADY' : 'READY UP'}
+                      </button>
+                    )}
                   </div>
                   <div className="text-center">
                     <h4 className="text-sm pixel-glow-purple mb-2">PLAYER 2</h4>

@@ -41,6 +41,11 @@ export const CharacterSelectScreen: React.FC = () => {
     const isMultiplayer = lobby.mode === 'host' || lobby.mode === 'join' || lobby.connectedP2;
     const isPlayer2AutoAssigned = isMultiplayer && player === 2 && players.p1.characterId;
     
+    // Determine if this is the local player's card
+    const isLocalPlayer = isMultiplayer ? 
+      (lobby.side === 'red' && player === 1) || (lobby.side === 'blue' && player === 2) :
+      player === 1; // In single player, only player 1 is local
+    
     return (
       <PixelPanel variant={isSelected ? 'outlined' : 'default'} className="h-full">
         <div className="text-center mb-6">
@@ -60,7 +65,7 @@ export const CharacterSelectScreen: React.FC = () => {
             {/* Character Selection */}
             <div className="grid grid-cols-2 gap-4 mb-6">
               {CHARACTERS.map((char) => {
-                const isDisabled = isMultiplayer && player === 2;
+                const isDisabled = !isLocalPlayer || (isMultiplayer && player === 2);
                 const isAutoSelected = isPlayer2AutoAssigned && isSelected === char.id;
                 
                 return (

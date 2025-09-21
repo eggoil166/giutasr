@@ -94,6 +94,19 @@ export class GameEngine {
   private greatHits = 0;
   private goodHits = 0;
   private missedHits = 0;
+  
+  // Individual player tracking for competitive scoring
+  private player1Score = 0;
+  private player2Score = 0;
+  private player1PerfectHits = 0;
+  private player1GreatHits = 0;
+  private player1GoodHits = 0;
+  private player1MissedHits = 0;
+  private player2PerfectHits = 0;
+  private player2GreatHits = 0;
+  private player2GoodHits = 0;
+  private player2MissedHits = 0;
+  
   private onNoteResult: ((result: { judgment: Judgment; note: Note; player: number; accuracy: number }) => void) | null = null;
   
   constructor(canvas: HTMLCanvasElement, audioContext: AudioContext, gainNode: GainNode) {
@@ -217,6 +230,18 @@ export class GameEngine {
     this.spacebarPressed = false;
     this.spacebarBoostMultiplier = 1.0;
     
+    // Reset individual player scores
+    this.player1Score = 0;
+    this.player2Score = 0;
+    this.player1PerfectHits = 0;
+    this.player1GreatHits = 0;
+    this.player1GoodHits = 0;
+    this.player1MissedHits = 0;
+    this.player2PerfectHits = 0;
+    this.player2GreatHits = 0;
+    this.player2GoodHits = 0;
+    this.player2MissedHits = 0;
+    
     if (songId) {
       // kick off chart load and audio
       this.generateChartFromFile(songId).catch(err => console.error('ChartLoadError', err));
@@ -277,15 +302,29 @@ export class GameEngine {
         if (note.y > this.HIT_LINE_Y + 100 && !note.hit) {
           note.hit = true;
           this.missedHits++;
+          
+          // Assign auto-miss to appropriate player based on track
+          // Guitar track notes go to Player 1, Drum track notes go to Player 2
+          const missedPlayer = note.track === 'drum' ? 2 : 1;
+          if (missedPlayer === 1) {
+            this.player1MissedHits++;
+          } else {
+            this.player2MissedHits++;
+          }
+          
+          // Update bear/man progress after auto-miss
+          this.updateBearManProgress();
+          
           const accuracy = this.calculateAccuracy();
           
           console.log('NoteMiss', { 
-            player: 1, // Default to player 1 for auto-misses
+            player: missedPlayer,
+            track: note.track,
             lane: note.lane, 
             deltaMs: Math.abs(note.y - this.HIT_LINE_Y) * 1000 / this.NOTE_SPEED
           });
           console.log('AccuracyUpdated', { 
-            player: 1, 
+            player: missedPlayer, 
             accuracy: accuracy 
           });
           
@@ -293,7 +332,7 @@ export class GameEngine {
             this.onNoteResult({
               judgment: { type: 'Miss', score: 0 },
               note,
-              player: 1,
+              player: missedPlayer,
               accuracy
             });
           }
@@ -467,7 +506,7 @@ export class GameEngine {
       this.playfield.add(guitarRightEdge);
       
       // Drum track lane divider bars (pivoted 15 degrees) - 2 lanes
-      const drumLaneXs: number[] = [0, 1].map(i => this.getDrumLaneX(i));
+      const drumLaneXs: number[] = [0, 1].map(i => this.getDrumLaneX(i as 0 | 1));
       const drumDividerMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xff6600, emissiveIntensity: 0.9, metalness: 0.2, roughness: 0.4 });
       
       // Drum track dividers (pivoted) - only one divider between 2 lanes
@@ -521,7 +560,7 @@ export class GameEngine {
       
       // Create drum track rings (pivoted 15 degrees) - 2 lanes
       for (let i = 0; i < 2; i++) {
-        const x = this.getDrumLaneX(i);
+        const x = this.getDrumLaneX(i as 0 | 1);
         const mat = new THREE.MeshStandardMaterial({ 
           color: this.drumRingBaseColors[i], 
           emissive: this.drumRingBaseColors[i], 
@@ -706,7 +745,9 @@ export class GameEngine {
       
       // Position based on track type
       if (n.track === 'drum') {
-        mesh.position.set(this.getDrumLaneX(n.lane), this.HIT_PLANE_Y, this.timeToZ(n.time));
+        // Map drum lane (0-1) to drum position
+        const drumLane = Math.min(n.lane, 1) as 0 | 1;
+        mesh.position.set(this.getDrumLaneX(drumLane), this.HIT_PLANE_Y, this.timeToZ(n.time));
         // mesh.rotation.z = this.DRUM_TRACK_ANGLE; // Temporarily remove rotation to test positioning
       } else {
         mesh.position.set(this.getLaneX(n.lane), this.HIT_PLANE_Y, this.timeToZ(n.time));
@@ -993,20 +1034,46 @@ export class GameEngine {
     if (deltaMs <= this.PERFECT_WINDOW) {
       judgment = { type: 'Perfect', score: Math.floor(baseScore * typeBonus) };
       this.perfectHits++;
-      this.bearProgress += this.BEAR_HIT_BOOST * 1.5 * this.spacebarBoostMultiplier;
+      if (player === 1) {
+        this.player1PerfectHits++;
+        this.player1Score += judgment.score;
+      } else {
+        this.player2PerfectHits++;
+        this.player2Score += judgment.score;
+      }
     } else if (deltaMs <= this.GREAT_WINDOW) {
       judgment = { type: 'Great', score: Math.floor(70 * typeBonus) };
       this.greatHits++;
-      this.bearProgress += this.BEAR_HIT_BOOST * this.spacebarBoostMultiplier;
+      if (player === 1) {
+        this.player1GreatHits++;
+        this.player1Score += judgment.score;
+      } else {
+        this.player2GreatHits++;
+        this.player2Score += judgment.score;
+      }
     } else if (deltaMs <= this.GOOD_WINDOW) {
       judgment = { type: 'Good', score: Math.floor(40 * typeBonus) };
       this.goodHits++;
-      this.bearProgress += this.BEAR_HIT_BOOST * 0.7 * this.spacebarBoostMultiplier;
+      if (player === 1) {
+        this.player1GoodHits++;
+        this.player1Score += judgment.score;
+      } else {
+        this.player2GoodHits++;
+        this.player2Score += judgment.score;
+      }
     } else {
       judgment = { type: 'Miss', score: 0 };
       this.missedHits++;
+      if (player === 1) {
+        this.player1MissedHits++;
+      } else {
+        this.player2MissedHits++;
+      }
       console.log('NoteMiss', { player, lane, deltaMs });
     }
+    
+    // Update bear/man progress based on score difference
+    this.updateBearManProgress();
 
     // 3D note glow feedback only on successful hits
     if (judgment.type !== 'Miss') {
@@ -1021,6 +1088,47 @@ export class GameEngine {
     return { judgment, note: closestNote, accuracy };
   }
   
+  private updateBearManProgress(): void {
+    // Calculate score difference (Player 1 - Player 2)
+    const scoreDifference = this.player1Score - this.player2Score;
+    const totalPossibleScore = Math.max(this.player1Score + this.player2Score, 1); // Avoid division by zero
+    
+    // Calculate progress based on score ratio
+    // If Player 1 (bear) is winning, bear moves forward
+    // If Player 2 (man) is winning, man catches up
+    const progressRatio = scoreDifference / totalPossibleScore;
+    
+    // Base progress - bear starts at 10%, man at 0%
+    const baseProgress = 10.0;
+    const maxProgress = 100.0;
+    
+    // Scale the progress based on score difference
+    // Positive difference = bear advantage, negative = man advantage
+    const progressAdjustment = progressRatio * 80; // Max 80% swing
+    
+    this.bearProgress = Math.max(0, Math.min(maxProgress, baseProgress + progressAdjustment));
+    this.manProgress = Math.max(0, Math.min(maxProgress, baseProgress - progressAdjustment));
+    
+    // Check win conditions
+    if (this.bearProgress >= maxProgress) {
+      this.gameOver = true;
+      this.gameResult = 'bear_escaped';
+      console.log('Bear escaped! Player 1 wins with score advantage.');
+    } else if (this.manProgress >= this.bearProgress) {
+      this.gameOver = true;
+      this.gameResult = 'man_caught';
+      console.log('Man caught the bear! Player 2 wins with score advantage.');
+    }
+    
+    console.log('Progress Update:', {
+      player1Score: this.player1Score,
+      player2Score: this.player2Score,
+      scoreDifference,
+      bearProgress: this.bearProgress,
+      manProgress: this.manProgress
+    });
+  }
+
   private calculateAccuracy(): number {
     const processed = this.perfectHits + this.greatHits + this.goodHits + this.missedHits;
     if (processed === 0) return 100;
@@ -1028,6 +1136,21 @@ export class GameEngine {
     // Calculate accuracy as percentage of perfect hits
     // Perfect = 100%, Great = 90%, Good = 75%, Miss = 0%
     const weightedScore = (this.perfectHits * 100) + (this.greatHits * 90) + (this.goodHits * 75) + (this.missedHits * 0);
+    const maxPossibleScore = processed * 100;
+    
+    return Math.max(0, Math.min(100, (weightedScore / maxPossibleScore)));
+  }
+  
+  private calculatePlayerAccuracy(player: 1 | 2): number {
+    const perfectHits = player === 1 ? this.player1PerfectHits : this.player2PerfectHits;
+    const greatHits = player === 1 ? this.player1GreatHits : this.player2GreatHits;
+    const goodHits = player === 1 ? this.player1GoodHits : this.player2GoodHits;
+    const missedHits = player === 1 ? this.player1MissedHits : this.player2MissedHits;
+    
+    const processed = perfectHits + greatHits + goodHits + missedHits;
+    if (processed === 0) return 100;
+    
+    const weightedScore = (perfectHits * 100) + (greatHits * 90) + (goodHits * 75) + (missedHits * 0);
     const maxPossibleScore = processed * 100;
     
     return Math.max(0, Math.min(100, (weightedScore / maxPossibleScore)));
@@ -1046,7 +1169,24 @@ export class GameEngine {
        gameOver: this.gameOver,
        gameResult: this.gameResult,
        spacebarPressed: this.spacebarPressed,
-       spacebarBoostMultiplier: this.spacebarBoostMultiplier
+       spacebarBoostMultiplier: this.spacebarBoostMultiplier,
+       // Individual player stats
+       player1Score: this.player1Score,
+       player2Score: this.player2Score,
+       player1Accuracy: this.calculatePlayerAccuracy(1),
+       player2Accuracy: this.calculatePlayerAccuracy(2),
+       player1Stats: {
+         perfectHits: this.player1PerfectHits,
+         greatHits: this.player1GreatHits,
+         goodHits: this.player1GoodHits,
+         missedHits: this.player1MissedHits
+       },
+       player2Stats: {
+         perfectHits: this.player2PerfectHits,
+         greatHits: this.player2GreatHits,
+         goodHits: this.player2GoodHits,
+         missedHits: this.player2MissedHits
+       }
      };
    }
   

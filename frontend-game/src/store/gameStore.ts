@@ -133,7 +133,22 @@ export const useGameStore = create<GameState>((set, get) => ({
     set((state) => {
       const newPlayers = { ...state.players };
       
-      // In multiplayer mode, only allow Player 1 to select characters
+      // Determine if this is the local player
+      const isLocalPlayer = state.lobby.mode === 'solo' ? 
+        player === 1 : // In single player, only player 1 is local
+        (state.lobby.side === 'red' && player === 1) || (state.lobby.side === 'blue' && player === 2);
+      
+      // Only allow the local player to select their own character
+      if (!isLocalPlayer) {
+        console.log('Only local player can select their own character', { 
+          player, 
+          lobbySide: state.lobby.side, 
+          isLocalPlayer 
+        });
+        return { players: newPlayers }; // No change
+      }
+      
+      // In multiplayer mode, only allow Player 1 to select characters (Player 2 is auto-assigned)
       if (state.lobby.mode !== 'solo' && player !== 1) {
         console.log('Player 2 cannot select character in multiplayer mode - character is auto-assigned');
         return { players: newPlayers }; // No change

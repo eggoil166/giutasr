@@ -39,6 +39,13 @@ export const GameScreen: React.FC = () => {
   const [bearBoost, setBearBoost] = useState(false);
   const [gameResult, setGameResult] = useState<'bear_escaped' | 'man_caught' | null>(null);
   const [playerWon, setPlayerWon] = useState<boolean | null>(null);
+  
+  // Track individual player stats from engine
+  const [player1Score, setPlayer1Score] = useState(0);
+  const [player2Score, setPlayer2Score] = useState(0);
+  const [player1Accuracy, setPlayer1Accuracy] = useState(100);
+  const [player2Accuracy, setPlayer2Accuracy] = useState(100);
+  
   const statsIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const endHandledRef = useRef(false);
 
@@ -158,6 +165,16 @@ export const GameScreen: React.FC = () => {
       setBearProgress(currentBearProgress);
       setManProgress(currentManProgress);
       setBearBoost(stats.spacebarPressed);
+      
+      // Update individual player scores from engine (if available)
+      if ('player1Score' in stats && 'player2Score' in stats) {
+        setPlayer1Score(typeof stats.player1Score === 'number' ? stats.player1Score : 0);
+        setPlayer2Score(typeof stats.player2Score === 'number' ? stats.player2Score : 0);
+        if ('player1Accuracy' in stats && 'player2Accuracy' in stats) {
+          setPlayer1Accuracy(typeof stats.player1Accuracy === 'number' ? stats.player1Accuracy : 100);
+          setPlayer2Accuracy(typeof stats.player2Accuracy === 'number' ? stats.player2Accuracy : 100);
+        }
+      }
       
       // Sync local game state to server in multiplayer
       if (isMultiplayer && lobby.code) {
@@ -301,9 +318,10 @@ export const GameScreen: React.FC = () => {
   
   
   const CharacterPanel: React.FC<{ player: 1 | 2 }> = ({ player }) => {
-    const score = player === 1 ? gameplay.scoreP1 : gameplay.scoreP2;
-    const combo = player === 1 ? gameplay.comboP1 : gameplay.comboP2;
-    const accuracy = player === 1 ? gameplay.accuracyP1 : gameplay.accuracyP2;
+    // Use individual player scores from engine if available, otherwise fall back to gameplay store
+    const score = player === 1 ? player1Score : player2Score;
+    const combo = player === 1 ? gameplay.comboP1 : gameplay.comboP2; // Keep combo from gameplay store for now
+    const accuracy = player === 1 ? player1Accuracy : player2Accuracy;
     const characterId = player === 1 ? players.p1.characterId : players.p2.characterId;
     
     const colorClass = player === 1 ? 'lane-green' : 'lane-blue';
@@ -385,9 +403,25 @@ export const GameScreen: React.FC = () => {
             >🧍</div>
           </div>
           <div className="flex justify-between text-[10px] mt-1 font-mono">
-            <span className="pixel-glow-green">BEAR {bearProgress.toFixed(1)}%</span>
+            <div className="flex items-center gap-2">
+              <span className="pixel-glow-green">BEAR {bearProgress.toFixed(1)}%</span>
+              {players.p1.characterId === 'bear' && (
+                <span className="text-green-400">P1: {player1Score}</span>
+              )}
+              {players.p2.characterId === 'bear' && (
+                <span className="text-green-400">P2: {player2Score}</span>
+              )}
+            </div>
             {bearBoost && <span className="pixel-glow-yellow animate-pulse">BOOST!</span>}
-            <span className="pixel-glow-red">MAN {manProgress.toFixed(1)}%</span>
+            <div className="flex items-center gap-2">
+              {players.p1.characterId === 'man' && (
+                <span className="text-red-400">P1: {player1Score}</span>
+              )}
+              {players.p2.characterId === 'man' && (
+                <span className="text-red-400">P2: {player2Score}</span>
+              )}
+              <span className="pixel-glow-red">MAN {manProgress.toFixed(1)}%</span>
+            </div>
           </div>
           {gameResult && (
             <div className="text-center mt-2 text-xs pixel-glow-pink">

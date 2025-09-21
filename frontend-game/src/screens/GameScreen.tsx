@@ -318,10 +318,27 @@ export const GameScreen: React.FC = () => {
   
   
   const CharacterPanel: React.FC<{ player: 1 | 2 }> = ({ player }) => {
+    // Determine if this is multiplayer and which player is local
+    const isMultiplayer = lobby.mode === 'host' || lobby.mode === 'join' || lobby.connectedP2;
+    const localPlayerNumber = isMultiplayer ? (lobby.side === 'blue' ? 2 : 1) : 1;
+    
+    // For the left panel (player 1), show local player's stats
+    // For the right panel (player 2), show remote player's stats
+    const isLocalPlayerPanel = (player === 1 && localPlayerNumber === 1) || (player === 2 && localPlayerNumber === 2);
+    
     // Use individual player scores from engine if available, otherwise fall back to gameplay store
-    const score = player === 1 ? player1Score : player2Score;
+    let score, accuracy;
+    if (isLocalPlayerPanel) {
+      // Show local player's score
+      score = localPlayerNumber === 1 ? player1Score : player2Score;
+      accuracy = localPlayerNumber === 1 ? player1Accuracy : player2Accuracy;
+    } else {
+      // Show remote player's score
+      score = localPlayerNumber === 1 ? player2Score : player1Score;
+      accuracy = localPlayerNumber === 1 ? player2Accuracy : player1Accuracy;
+    }
+    
     const combo = player === 1 ? gameplay.comboP1 : gameplay.comboP2; // Keep combo from gameplay store for now
-    const accuracy = player === 1 ? player1Accuracy : player2Accuracy;
     const characterId = player === 1 ? players.p1.characterId : players.p2.characterId;
     
     const colorClass = player === 1 ? 'lane-green' : 'lane-blue';

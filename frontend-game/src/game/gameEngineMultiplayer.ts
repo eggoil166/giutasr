@@ -134,10 +134,10 @@ export class GameEngine {
       const key = event.key.toLowerCase();
       if (key === 'l') {
         event.preventDefault();
-        this.handleInput(0, 'hit', 1, 'drum');
+        this.handleInput(0, 'hit', 2, 'drum');
       } else if (key === 'a') {
         event.preventDefault();
-        this.handleInput(1, 'hit', 1, 'drum');
+        this.handleInput(1, 'hit', 2, 'drum');
       }
     });
     

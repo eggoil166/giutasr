@@ -2,6 +2,44 @@ import React from 'react';
 import { NeonButton } from '../components/ui/NeonButton';
 import { PixelPanel } from '../components/ui/PixelPanel';
 import { useGameStore } from '../store/gameStore';
+import selection from '../../../assets/selection.wav';
+import changing from '../../../assets/change.wav';
+
+const playSfx = (file: string, vol: number) => {
+  const w = window as Window & { gameAudioContext?: AudioContext };
+
+  // ✅ Create AudioContext if it doesn't exist
+  if (!w.gameAudioContext) {
+    try {
+      w.gameAudioContext = new AudioContext();
+    } catch (e) {
+      console.warn("Unable to create AudioContext:", e);
+      return;
+    }
+  }
+
+  // Resume context if it was suspended (Chrome requires user interaction first)
+  if (w.gameAudioContext.state === "suspended") {
+    w.gameAudioContext.resume();
+  }
+
+  // Now decode and play
+  fetch(file)
+    .then(res => res.arrayBuffer())
+    .then(buffer => w.gameAudioContext!.decodeAudioData(buffer))
+    .then(decoded => {
+      const source = w.gameAudioContext!.createBufferSource();
+
+      // Create a gain node just for this sound effect
+      const sfxGain = w.gameAudioContext!.createGain();
+      sfxGain.gain.value = vol; // make it loud for testing
+
+      source.buffer = decoded;
+      source.connect(sfxGain).connect(w.gameAudioContext!.destination);
+      source.start(0);
+    })
+    .catch(err => console.warn("Failed to play sfx:", err));
+};
 
 export const SettingsScreen: React.FC = () => {
   const { settings, updateSettings, setScreen } = useGameStore();
@@ -60,7 +98,7 @@ export const SettingsScreen: React.FC = () => {
         <div className="flex justify-center">
           <NeonButton
             variant="secondary"
-            onClick={() => setScreen('TITLE')}
+            onClick={() => {playSfx(selection, 1.0); setScreen('TITLE')}}
           >
             ← BACK TO MENU
           </NeonButton>

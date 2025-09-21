@@ -29,11 +29,14 @@ pub struct Lobby {
     started: bool,
     red_score: u32,
     blue_score: u32,
+<<<<<<< HEAD
     // Individual player competitive scores
     red_player_score: u32,
     blue_player_score: u32,
     red_player_accuracy: f32,
     blue_player_accuracy: f32,
+=======
+>>>>>>> 739b657d3f482558a1f453da90b0117f93d50b5f
     // Bear vs Man chase mechanics
     bear_progress: f32,
     man_progress: f32,
@@ -69,10 +72,13 @@ pub fn create_lobby(ctx: &ReducerContext, code: String) -> Result<(), String> {
     started: false,
     red_score: 0,
     blue_score: 0,
+<<<<<<< HEAD
     red_player_score: 0,
     blue_player_score: 0,
     red_player_accuracy: 100.0,
     blue_player_accuracy: 100.0,
+=======
+>>>>>>> 739b657d3f482558a1f453da90b0117f93d50b5f
     bear_progress: 10.0,
     man_progress: 0.0,
     game_over: false,
@@ -214,6 +220,7 @@ pub fn update_game_state(ctx: &ReducerContext, code: String, bear_progress: f32,
     } else { Err("Lobby not found".into()) }
 }
 
+<<<<<<< HEAD
 #[reducer]
 pub fn update_player_score(ctx: &ReducerContext, code: String, score: u32, accuracy: f32) -> Result<(), String> {
     let code_up = code.to_uppercase();
@@ -238,6 +245,8 @@ pub fn update_player_score(ctx: &ReducerContext, code: String, score: u32, accur
     } else { Err("Lobby not found".into()) }
 }
 
+=======
+>>>>>>> 739b657d3f482558a1f453da90b0117f93d50b5f
 /// Mark users online when they connect
 #[reducer(client_connected)]
 pub fn client_connected(ctx: &ReducerContext) {

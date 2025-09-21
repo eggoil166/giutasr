@@ -62,7 +62,7 @@ export const CharacterSelectScreen: React.FC = () => {
         
         {isP2Available && (
           <>
-            {/* Character Selection */}
+            {/* Character Selection,  */}
             <div className="grid grid-cols-2 gap-4 mb-6">
               {CHARACTERS.map((char) => {
                 const isDisabled = !isLocalPlayer || (isMultiplayer && player === 2);

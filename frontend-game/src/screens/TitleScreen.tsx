@@ -1,5 +1,43 @@
 import React, { useEffect } from 'react';
 import { useGameStore } from '../store/gameStore';
+import selection from '../../../assets/selection.wav';
+import changing from '../../../assets/change.wav';
+
+const playSfx = (file: string, vol: number) => {
+  const w = window as Window & { gameAudioContext?: AudioContext };
+
+  // ✅ Create AudioContext if it doesn't exist
+  if (!w.gameAudioContext) {
+    try {
+      w.gameAudioContext = new AudioContext();
+    } catch (e) {
+      console.warn("Unable to create AudioContext:", e);
+      return;
+    }
+  }
+
+  // Resume context if it was suspended (Chrome requires user interaction first)
+  if (w.gameAudioContext.state === "suspended") {
+    w.gameAudioContext.resume();
+  }
+
+  // Now decode and play
+  fetch(file)
+    .then(res => res.arrayBuffer())
+    .then(buffer => w.gameAudioContext!.decodeAudioData(buffer))
+    .then(decoded => {
+      const source = w.gameAudioContext!.createBufferSource();
+
+      // Create a gain node just for this sound effect
+      const sfxGain = w.gameAudioContext!.createGain();
+      sfxGain.gain.value = vol; // make it loud for testing
+
+      source.buffer = decoded;
+      source.connect(sfxGain).connect(w.gameAudioContext!.destination);
+      source.start(0);
+    })
+    .catch(err => console.warn("Failed to play sfx:", err));
+};
 
 export const TitleScreen: React.FC = () => {
   const { setScreen } = useGameStore();
@@ -8,6 +46,7 @@ export const TitleScreen: React.FC = () => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Enter' || event.key === ' ') {
         event.preventDefault();
+        playSfx(selection, 20.0);
         setScreen('MODE_SELECT');
       }
     };

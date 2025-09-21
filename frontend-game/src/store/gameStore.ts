@@ -47,11 +47,14 @@ export interface Gameplay {
   manProgress: number;
   synchronizedGameOver: boolean;
   synchronizedGameResult?: 'bear_escaped' | 'man_caught' | null;
+<<<<<<< HEAD
   // Individual competitive scores from server
   player1CompetitiveScore: number;
   player2CompetitiveScore: number;
   player1CompetitiveAccuracy: number;
   player2CompetitiveAccuracy: number;
+=======
+>>>>>>> 739b657d3f482558a1f453da90b0117f93d50b5f
 }
 
 export interface GameState {
@@ -117,10 +120,13 @@ export const useGameStore = create<GameState>((set, get) => ({
     manProgress: 0.0,
     synchronizedGameOver: false,
     synchronizedGameResult: null,
+<<<<<<< HEAD
     player1CompetitiveScore: 0,
     player2CompetitiveScore: 0,
     player1CompetitiveAccuracy: 100,
     player2CompetitiveAccuracy: 100,
+=======
+>>>>>>> 739b657d3f482558a1f453da90b0117f93d50b5f
   },
 
   setScreen: (screen) => set({ currentScreen: screen }),
@@ -271,6 +277,18 @@ export const useGameStore = create<GameState>((set, get) => ({
             player1CompetitiveAccuracy: row.redPlayerAccuracy ?? state.gameplay.player1CompetitiveAccuracy,
             player2CompetitiveAccuracy: row.bluePlayerAccuracy ?? state.gameplay.player2CompetitiveAccuracy,
           },
+<<<<<<< HEAD
+=======
+          gameplay: { 
+            ...state.gameplay, 
+            scoreP1: row.red_score ?? state.gameplay.scoreP1, 
+            scoreP2: row.blue_score ?? state.gameplay.scoreP2,
+            bearProgress: row.bear_progress ?? state.gameplay.bearProgress,
+            manProgress: row.man_progress ?? state.gameplay.manProgress,
+            synchronizedGameOver: row.game_over ?? state.gameplay.synchronizedGameOver,
+            synchronizedGameResult: row.game_result as 'bear_escaped' | 'man_caught' | null ?? state.gameplay.synchronizedGameResult,
+          },
+>>>>>>> 739b657d3f482558a1f453da90b0117f93d50b5f
         }));
       }
     });
@@ -335,6 +353,18 @@ export const useGameStore = create<GameState>((set, get) => ({
             player1CompetitiveAccuracy: row.redPlayerAccuracy ?? state.gameplay.player1CompetitiveAccuracy,
             player2CompetitiveAccuracy: row.bluePlayerAccuracy ?? state.gameplay.player2CompetitiveAccuracy,
           },
+<<<<<<< HEAD
+=======
+          gameplay: { 
+            ...state.gameplay, 
+            scoreP1: row.red_score ?? state.gameplay.scoreP1, 
+            scoreP2: row.blue_score ?? state.gameplay.scoreP2,
+            bearProgress: row.bear_progress ?? state.gameplay.bearProgress,
+            manProgress: row.man_progress ?? state.gameplay.manProgress,
+            synchronizedGameOver: row.game_over ?? state.gameplay.synchronizedGameOver,
+            synchronizedGameResult: row.game_result as 'bear_escaped' | 'man_caught' | null ?? state.gameplay.synchronizedGameResult,
+          },
+>>>>>>> 739b657d3f482558a1f453da90b0117f93d50b5f
         }));
       }
     });
@@ -401,10 +431,13 @@ export const useGameStore = create<GameState>((set, get) => ({
       manProgress: 0.0,
       synchronizedGameOver: false,
       synchronizedGameResult: null,
+<<<<<<< HEAD
       player1CompetitiveScore: 0,
       player2CompetitiveScore: 0,
       player1CompetitiveAccuracy: 100,
       player2CompetitiveAccuracy: 100,
+=======
+>>>>>>> 739b657d3f482558a1f453da90b0117f93d50b5f
     },
   }),
 }));
